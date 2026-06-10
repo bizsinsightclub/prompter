@@ -152,7 +152,16 @@ header { padding: 18px 36px; background: #000; display: flex; justify-content: s
 .bulk-card h2 { font-size: 19px; font-weight: 900; color: #fff; }
 .bulk-card .bulk-desc { font-size: 13px; color: var(--dim); line-height: 1.6; margin-top: 8px; word-break: keep-all; }
 .bulk-card .bulk-desc code { background: #000; border: 1px solid var(--border); border-radius: 6px; padding: 1px 7px; color: var(--accent); font-size: 13px; }
-.bulk-card textarea { width: 100%; height: 320px; margin-top: 16px; background: #000; color: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 16px; font-family: 'Inter','Noto Sans KR',monospace; font-size: 14px; line-height: 1.6; resize: vertical; outline: none; }
+.bulk-steps { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.bstep { display: flex; gap: 12px; align-items: flex-start; }
+.bstep .bn { flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #000; font-size: 13px; font-weight: 900; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+.bstep .bt { flex: 1; }
+.bstep .bt b { font-size: 14px; color: #fff; font-weight: 800; }
+.bstep .bt p { font-size: 12.5px; color: var(--dim); line-height: 1.55; margin-top: 3px; word-break: keep-all; }
+.bstep .bt p code { background: #000; border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; color: var(--accent); font-size: 12px; }
+.bstep .bt .btn { margin-top: 8px; }
+
+.bulk-card textarea { width: 100%; height: 200px; margin-top: 16px; background: #000; color: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 16px; font-family: 'Inter','Noto Sans KR',monospace; font-size: 14px; line-height: 1.6; resize: vertical; outline: none; }
 .bulk-card textarea:focus { border-color: var(--accent); }
 .bulk-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
 .bulk-actions .grow { flex: 1; }

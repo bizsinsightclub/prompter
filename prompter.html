@@ -60,15 +60,39 @@
 <!-- ===== 일괄 입력 패널 ===== -->
 <div id="bulkPanel">
   <div class="bulk-card">
-    <h2>대본 일괄 입력</h2>
-    <div class="bulk-desc">
-      페이지 구분 기호 <code>=== 1 ===</code> 아래에 그 페이지 대본을 붙여넣으세요. (<code>--- 페이지 2 ---</code>, <code># 3</code> 형식도 인식)
-      강조는 <code>**별표 두 개**</code>. 아래 <b>LLM 프롬프트 복사</b>로 받은 결과를 그대로 붙여넣으면 됩니다.
+    <h2>대본 일괄 입력 — LLM으로 한 번에 작성하기</h2>
+    <div class="bulk-steps">
+      <div class="bstep">
+        <span class="bn">1</span>
+        <div class="bt">
+          <b>LLM 프롬프트를 복사한다</b>
+          <p>아래 버튼을 누르면 “페이지별 대본을 <code>=== 1 ===</code> 형식으로 써 달라”는 프롬프트가 복사됩니다.</p>
+          <button class="btn primary" onclick="copyLLMPrompt()">📋 LLM 프롬프트 복사</button>
+        </div>
+      </div>
+      <div class="bstep">
+        <span class="bn">2</span>
+        <div class="bt">
+          <b>LLM에 붙여넣고 원본 슬라이드를 함께 첨부한다</b>
+          <p>ChatGPT·Claude 등에 프롬프트를 붙여넣고, <b>발표 원본(PDF 또는 페이지 이미지)을 같이 첨부</b>하세요. LLM이 슬라이드를 보고 페이지별 대본을 <code>=== 1 ===</code> 형식으로 작성해 줍니다.</p>
+        </div>
+      </div>
+      <div class="bstep">
+        <span class="bn">3</span>
+        <div class="bt">
+          <b>받은 결과를 아래 칸에 붙여넣는다</b>
+          <p>LLM 출력 전체를 그대로 붙여넣으면 됩니다. 직접 작성도 가능 — 구분 <code>=== 1 ===</code>(<code>--- 페이지 2 ---</code>, <code># 3</code> 도 인식), 강조 <code>**별표**</code>, 시간 <code>=== 3 (60s) ===</code>.</p>
+        </div>
+      </div>
+      <div class="bstep">
+        <span class="bn">4</span>
+        <div class="bt"><b>‘대본 적용’을 누른다</b><p>페이지별로 자동 편성·저장됩니다.</p></div>
+      </div>
     </div>
-    <textarea id="bulkText" placeholder="=== 1 ===&#10;첫 페이지 대본...&#10;&#10;=== 2 ===&#10;둘째 페이지 대본..."></textarea>
+    <textarea id="bulkText" placeholder="여기에 LLM이 만든 대본을 붙여넣으세요.&#10;&#10;=== 1 ===&#10;첫 페이지 대본...&#10;&#10;=== 2 ===&#10;둘째 페이지 대본..."></textarea>
     <div class="bulk-msg" id="bulkMsg"></div>
     <div class="bulk-actions">
-      <button class="btn" onclick="copyLLMPrompt()">📋 LLM 프롬프트 복사</button>
+      <button class="btn" onclick="copyLLMPrompt()">📋 프롬프트 다시 복사</button>
       <span class="grow"></span>
       <button class="btn" onclick="closeBulk()">취소</button>
       <button class="btn primary" onclick="applyBulk()">대본 적용</button>
