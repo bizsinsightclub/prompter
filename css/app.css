@@ -138,7 +138,7 @@ header { padding: 18px 36px; background: #000; display: flex; justify-content: s
 #toolbar .tb-done { margin-left: auto; background: var(--accent); color: #000; border-color: var(--accent); font-weight: 900; padding: 0 14px; }
 
 /* 편집 시 본문 위쪽 여백(툴바 자리) */
-#script-area.editing { cursor: default; padding: 70px 48px 36px; }
+#script-area.editing { cursor: default; padding: 124px 48px 36px; }   /* 2줄 툴바 높이만큼 확보 */
 .script-content { outline: none; }
 .script-content.is-empty::before { content: '이 페이지에 저장된 대본이 없습니다. 편집(E) 으로 입력하거나, 일괄 입력으로 한 번에 붙여넣으세요.'; color: var(--dim); font-size: 24px; font-weight: 400; }
 .script-content[contenteditable="true"] { font-size: 26px; line-height: 1.6; }
@@ -167,6 +167,17 @@ header { padding: 18px 36px; background: #000; display: flex; justify-content: s
 .rec-set input { width: 64px; background: #000; border: 1px solid var(--border); color: #fff; border-radius: 8px; padding: 6px 8px; font-size: 14px; font-weight: 800; font-family: inherit; text-align: center; font-variant-numeric: tabular-nums; }
 .rec-set input:focus { border-color: var(--accent); outline: none; }
 .rec-set .rec-hint { font-size: 10px; color: #444; }
+
+/* 큰 타이머 내 총 발표 시간 설정 */
+.target-set { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 12px; color: var(--dim); display: flex; align-items: center; gap: 6px; }
+.target-set input { width: 64px; background: #000; border: 1px solid var(--border); color: var(--accent); border-radius: 8px; padding: 6px 8px; font-size: 15px; font-weight: 900; font-family: inherit; text-align: center; font-variant-numeric: tabular-nums; }
+.target-set input:focus { border-color: var(--accent); outline: none; }
+
+/* 시작 화면 총 발표 시간 */
+.total-set { margin-top: 24px; font-size: 15px; color: #aaa; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.total-set input { width: 80px; background: #000; border: 1px solid #333; color: var(--accent); border-radius: 10px; padding: 10px; font-size: 20px; font-weight: 900; font-family: inherit; text-align: center; font-variant-numeric: tabular-nums; }
+.total-set input:focus { border-color: var(--accent); outline: none; }
+.total-set .rec-hint { font-size: 12px; color: #555; }
 
 /* ===== 영상 박스 (사이드바) ===== */
 .media-box { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; }

@@ -22,6 +22,7 @@
     <div class="dz-sub">불러온 PDF는 이 브라우저에 저장되어 다음에 다시 열립니다</div>
   </div>
   <input type="file" id="pdfFile" accept="application/pdf" style="display:none;">
+  <div class="total-set">⏱ 총 발표 시간 <input id="totalMinStart" type="number" min="1" max="600" value="18"> 분 <span class="rec-hint">(언제든 변경 가능)</span></div>
   <div class="s-hint">팁 — 폰·다른 기기 연결까지 쓰려면 정적 서버(localhost) 또는 HTTPS로 여세요</div>
 </div>
 
@@ -34,6 +35,7 @@
     <div class="status-tag" id="screenTag" title="감지된 디스플레이">화면 ?</div>
     <div class="status-tag" id="statusTag">STANDBY</div>
     <button class="btn" onclick="showStart()">📄 PDF 교체</button>
+    <button class="btn" onclick="openBulk()">⤵ 대본 일괄 입력</button>
     <button class="btn" id="remoteBtn" onclick="toggleRemote()">🔗 기기 연결</button>
     <button class="btn" id="coverBtn" onclick="coverShow()">가림 (Esc)</button>
     <button class="btn primary" id="deckBtn" onclick="toggleDeck()">프로젝터에 슬라이드 띄우기</button>
@@ -119,6 +121,7 @@
         <div class="bt-page">이 페이지 <b id="bt-pageElapsed">0</b>초</div>
         <div class="bt-elapsed" id="bt-total" title="총 경과">00:00</div>
       </div>
+      <div class="target-set">총 발표 시간 <input id="totalMin" type="number" min="1" max="600" value="18"> 분</div>
     </div>
     <div class="pace" id="paceBar"><i id="paceFill"></i></div>
     <div class="rec-set">이 페이지 권장 <input id="recInput" type="number" min="5" step="5" value="40"> 초 <span class="rec-hint">(발표자 설정·저장)</span></div>
@@ -133,7 +136,6 @@
 
     <div class="notes-tools">
       <button class="btn" onclick="toggleEdit()" id="editBtn">✎ 편집 (E)</button>
-      <button class="btn" onclick="openBulk()">⤵ 일괄 입력</button>
     </div>
     <div class="notes-tools">
       <button class="btn" onclick="Notes.exportJSON()">↓ 내보내기</button>
@@ -203,7 +205,16 @@ const CFG = window.PROMPTER_CONFIG;
 let currentSlide = 0, total = 0, recSec = 40, defaultRec = 40;
 let mediaPlaying = false, _pendingMp4 = null;
 let deckWin = null, editing = false;
-const TARGET_SEC = CFG.targetSec;
+let targetSec = (parseInt(localStorage.getItem('targetMin'),10) || Math.round(CFG.targetSec/60)) * 60;
+function setTotalMin(min){
+  min = Math.max(1, Math.min(600, parseInt(min,10) || 18));
+  targetSec = min * 60;
+  try{ localStorage.setItem('targetMin', String(min)); }catch(e){}
+  const a=document.getElementById('totalMin'), b=document.getElementById('totalMinStart');
+  if(a) a.value = min; if(b) b.value = min;
+  defaultRec = total ? Math.max(15, Math.round(targetSec/total)) : defaultRec;
+  if(!Notes.getTime(currentSlide)) recSec = defaultRec;   // 기본값 쓰는 페이지면 갱신
+}
 let slideEnteredAt = Date.now();
 let coverVisible = true, started = false, startTs = null, coverWasUp = false;
 
@@ -225,7 +236,7 @@ async function handlePdf(file){
 }
 function afterPdfLoaded(){
   document.getElementById('s-total').innerText = total || '–';
-  defaultRec = total ? Math.max(15, Math.round(TARGET_SEC/total)) : 40;
+  defaultRec = total ? Math.max(15, Math.round(targetSec/total)) : 40;
   document.getElementById('s-file').innerText = PdfRender.name() || '—';
   currentSlide = 0;
   goSlide(0);
@@ -363,7 +374,7 @@ function applyBulk(){
   if(n){ renderNote(); broadcast(); setTimeout(closeBulk, 900); }
 }
 async function copyLLMPrompt(){
-  const prompt = Notes.llmPrompt(total);
+  const prompt = Notes.llmPrompt(total, targetSec);
   try{ await navigator.clipboard.writeText(prompt); document.getElementById('bulkMsg').innerText='LLM 프롬프트를 복사했습니다. LLM에 붙여넣고 결과를 위 칸에 다시 붙여넣으세요.'; }
   catch(e){ document.getElementById('bulkText').value = prompt; document.getElementById('bulkMsg').innerText='클립보드 권한이 없어 입력칸에 넣었습니다. 복사해 사용하세요.'; }
 }
@@ -374,6 +385,10 @@ document.getElementById('recInput').addEventListener('change', ()=>{
   Notes.setTime(currentSlide, v > 0 ? v : 0);   // 0이면 기본값으로 복귀
   recSec = (v > 0) ? v : defaultRec;
 });
+
+/* ===== 총 발표 시간 설정 (시작 화면 + 타이머 양쪽) ===== */
+document.getElementById('totalMin').addEventListener('change', (e)=> setTotalMin(e.target.value));
+document.getElementById('totalMinStart').addEventListener('change', (e)=> setTotalMin(e.target.value));
 
 /* ===== 영상 (유튜브 / 로컬 mp4) ===== */
 function ytId(url){ const m = (url||'').match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/)([A-Za-z0-9_-]{6,})/); return m ? m[1] : null; }
@@ -525,7 +540,7 @@ const host = Sync.createHost({
 
 function makeState(){
   const diff = startTs ? Math.floor((Date.now()-startTs)/1000) : 0;
-  const rem = TARGET_SEC - diff, ar = Math.abs(rem);
+  const rem = targetSec - diff, ar = Math.abs(rem);
   return { type:'state', idx:currentSlide, total,
     remain:`${rem<0?'-':''}${String(Math.floor(ar/60)).padStart(2,'0')}:${String(ar%60).padStart(2,'0')}`,
     over: rem<0, covered: coverVisible, note: Notes.get(currentSlide) };
@@ -569,7 +584,7 @@ setInterval(()=>{
   const diff = startTs ? Math.floor((Date.now()-startTs)/1000) : 0;
   document.getElementById('elapsed').innerText = fmtHMS(diff);
   document.getElementById('bt-total').innerText = fmtMS(diff);
-  const rem = TARGET_SEC - diff, ar = Math.abs(rem);
+  const rem = targetSec - diff, ar = Math.abs(rem);
   document.getElementById('bt-remain').innerText = `${rem<0?'-':''}${fmtMS(ar)}`;
   document.getElementById('bigTimer').classList.toggle('is-over', rem < 0);
 
@@ -602,6 +617,7 @@ function applyCover(){
 }
 async function init(){
   applyFont(); detectScreens(); applyCover();
+  setTotalMin(Math.round(targetSec/60));     // 저장된 총 발표 시간으로 입력칸 채움
   const ok = await PdfRender.loadStored();   // 저장된 PDF 있으면 자동 로드
   if(ok){
     total = PdfRender.pageCount();

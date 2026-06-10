@@ -137,8 +137,8 @@
   }
 
   /* ---------- LLM 프롬프트 생성 ---------- */
-  function llmPrompt(totalPages) {
-    const target = cfg.targetSec || 18 * 60;
+  function llmPrompt(totalPages, targetSec) {
+    const target = targetSec || cfg.targetSec || 18 * 60;
     const min = Math.floor(target / 60);
     const per = totalPages ? Math.round(target / totalPages) : 40;
     return [
