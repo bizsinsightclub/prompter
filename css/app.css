@@ -99,6 +99,7 @@ header { padding: 18px 36px; background: #000; display: flex; justify-content: s
 .qr { width: 170px; height: 170px; margin: 0 auto; background: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .qr img, .qr canvas { width: 170px !important; height: 170px !important; }
 .rp-deck { border-top: 1px solid var(--border); margin-top: 16px; padding-top: 14px; }
+.rp-url { margin-top: 8px; font-family: 'Inter', monospace; font-size: 13px; font-weight: 800; color: var(--accent); background: #000; border: 1px solid var(--border); border-radius: 8px; padding: 9px 10px; word-break: break-all; -webkit-user-select: text; user-select: text; }
 .rp-stat { font-size: 12px; font-weight: 800; letter-spacing: 0.04em; margin-top: 12px; }
 .rp-stat.on { color: var(--ok); }
 .rp-stat.off { color: var(--accent); }

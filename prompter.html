@@ -50,8 +50,10 @@
     <div class="qr" id="qrPhone">…</div>
   </div>
   <div class="rp-block rp-deck">
-    <div class="rp-lbl">🖥 연단 슬라이드 — 다른 기기에서</div>
-    <div class="rp-sub"><b>deck.html</b> 을 열고 위 <b>3자리 코드</b> 입력<br>슬라이드 이미지는 이 프롬프터가 직접 전송합니다(연단 기기에 PDF 불필요).</div>
+    <div class="rp-lbl">🖥 연단(발표장) 슬라이드 — 다른 PC에서</div>
+    <div class="rp-sub">발표장 PC 브라우저에 아래 주소를 열고, 위 <b>3자리 코드</b>를 입력하세요.</div>
+    <div class="rp-url" id="deckUrl">…</div>
+    <div class="rp-sub" style="margin-top:6px;">내 기기가 슬라이드를 직접 전송하므로 <b>발표장 PC엔 PDF·설치 불필요</b>.</div>
   </div>
   <div class="rp-stat off" id="rpStat">대기 중</div>
   <button class="rp-close" onclick="toggleRemote()">닫기</button>
@@ -557,6 +559,7 @@ const host = Sync.createHost({
   onReady: ({code, peerId})=>{
     document.getElementById('rpCode').innerText = code;
     renderQR('qrPhone', deckBase() + 'remote.html?id=' + peerId);
+    document.getElementById('deckUrl').innerText = (deckBase() + 'deck.html').replace(/^https?:\/\//,'');
     setRemoteStat('off','기기 연결 대기 중');
   },
   onStatus: (t)=> setRemoteStat('off', t)
