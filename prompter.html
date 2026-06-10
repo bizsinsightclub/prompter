@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>프롬프터 · PDF 텔레프롬프터</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+KR:wght@300;500;700;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<!-- ===== 시작 화면: PDF 입력 ===== -->
+<div id="start">
+  <div class="s-eyebrow">PDF TELEPROMPTER</div>
+  <h1 id="startTitle">프롬프터용 PDF를 불러오세요</h1>
+  <p>발표 슬라이드 PDF를 선택하면 각 페이지를 이미지로 변환해 페이지별로 편성합니다. 대본은 비어 있는 상태에서 시작합니다.</p>
+  <div id="dropzone">
+    <div class="dz-icon">📄</div>
+    <div class="dz-main">여기에 PDF를 끌어다 놓거나 클릭해 선택</div>
+    <div class="dz-sub">불러온 PDF는 이 브라우저에 저장되어 다음에 다시 열립니다</div>
+  </div>
+  <input type="file" id="pdfFile" accept="application/pdf" style="display:none;">
+  <div class="s-hint">팁 — 폰·다른 기기 연결까지 쓰려면 정적 서버(localhost) 또는 HTTPS로 여세요</div>
+</div>
+
+<header>
+  <div class="time-box">
+    <div>CLOCK<b id="clock">00:00:00</b></div>
+    <div>RUNNING<b id="elapsed">00:00:00</b></div>
+  </div>
+  <div class="head-right">
+    <div class="status-tag" id="screenTag" title="감지된 디스플레이">화면 ?</div>
+    <div class="status-tag" id="statusTag">STANDBY</div>
+    <button class="btn" onclick="showStart()">📄 PDF 교체</button>
+    <button class="btn" id="remoteBtn" onclick="toggleRemote()">🔗 기기 연결</button>
+    <button class="btn" id="coverBtn" onclick="coverShow()">가림 (Esc)</button>
+    <button class="btn primary" id="deckBtn" onclick="toggleDeck()">프로젝터에 슬라이드 띄우기</button>
+  </div>
+</header>
+
+<div id="remotePanel" class="hidden">
+  <div class="rp-title">🔗 기기 연결</div>
+  <div class="rp-code">슬라이드 연결 코드 (deck.html 에 입력)<b id="rpCode">···</b></div>
+  <div class="rp-block">
+    <div class="rp-lbl">📱 폰 리모컨 — QR 스캔 (입력 불필요)</div>
+    <div class="qr" id="qrPhone">…</div>
+  </div>
+  <div class="rp-block rp-deck">
+    <div class="rp-lbl">🖥 연단 슬라이드 — 다른 기기에서</div>
+    <div class="rp-sub"><b>deck.html</b> 을 열고 위 <b>3자리 코드</b> 입력<br>슬라이드 이미지는 이 프롬프터가 직접 전송합니다(연단 기기에 PDF 불필요).</div>
+  </div>
+  <div class="rp-stat off" id="rpStat">대기 중</div>
+  <button class="rp-close" onclick="toggleRemote()">닫기</button>
+</div>
+
+<!-- ===== 일괄 입력 패널 ===== -->
+<div id="bulkPanel">
+  <div class="bulk-card">
+    <h2>대본 일괄 입력</h2>
+    <div class="bulk-desc">
+      페이지 구분 기호 <code>=== 1 ===</code> 아래에 그 페이지 대본을 붙여넣으세요. (<code>--- 페이지 2 ---</code>, <code># 3</code> 형식도 인식)
+      강조는 <code>**별표 두 개**</code>. 아래 <b>LLM 프롬프트 복사</b>로 받은 결과를 그대로 붙여넣으면 됩니다.
+    </div>
+    <textarea id="bulkText" placeholder="=== 1 ===&#10;첫 페이지 대본...&#10;&#10;=== 2 ===&#10;둘째 페이지 대본..."></textarea>
+    <div class="bulk-msg" id="bulkMsg"></div>
+    <div class="bulk-actions">
+      <button class="btn" onclick="copyLLMPrompt()">📋 LLM 프롬프트 복사</button>
+      <span class="grow"></span>
+      <button class="btn" onclick="closeBulk()">취소</button>
+      <button class="btn primary" onclick="applyBulk()">대본 적용</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 영상 첨부 패널 ===== -->
+<div id="mediaPanel">
+  <div class="bulk-card">
+    <h2>이 페이지에 영상 첨부 <span id="mediaPageLbl" style="color:var(--accent)"></span></h2>
+    <div class="bulk-desc">발표 중 <b>▶ 영상</b>(또는 V키)을 누르면 연단 슬라이드 위에 전체화면으로 재생됩니다. 닫으면 슬라이드로 복귀.</div>
+    <div class="media-row">
+      <div class="rp-lbl">유튜브 링크</div>
+      <input id="ytUrl" class="media-input" placeholder="https://youtu.be/... 또는 https://www.youtube.com/watch?v=...">
+      <div class="bulk-desc">모든 기기(크로스 디바이스)에서 재생됩니다.</div>
+    </div>
+    <div class="media-row">
+      <div class="rp-lbl">또는 로컬 mp4 업로드</div>
+      <button class="btn" onclick="document.getElementById('mp4File').click()">📁 mp4 파일 선택</button>
+      <span id="mp4Name" class="media-input-name">선택된 파일 없음</span>
+      <input type="file" id="mp4File" accept="video/mp4,video/*" style="display:none;">
+      <div class="bulk-desc">이 브라우저에 저장 → <b>같은 PC deck</b>에서 재생. 다른 기기 deck에서는 유튜브를 쓰세요.</div>
+    </div>
+    <div class="bulk-msg" id="mediaMsg"></div>
+    <div class="bulk-actions">
+      <button class="btn" onclick="removeMedia()">영상 제거</button>
+      <span class="grow"></span>
+      <button class="btn" onclick="closeMediaDialog()">취소</button>
+      <button class="btn primary" onclick="saveMediaDialog()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div id="main">
+  <div id="sidebar">
+    <div class="thumb-container">
+      <img id="thumb" alt="현재 슬라이드" style="display:none;">
+      <span class="ph" id="thumbPh">—</span>
+    </div>
+    <div class="slide-meta">
+      <div class="slide-num"><span id="s-num">01</span><span class="total"> / <span id="s-total">–</span></span></div>
+      <div class="slide-file" id="s-file" title="마운트된 PDF">—</div>
+    </div>
+
+    <div class="big-timer" id="bigTimer">
+      <div class="bt-cap">남은 시간</div>
+      <div class="bt-remain" id="bt-remain">18:00</div>
+      <div class="bt-row">
+        <div class="bt-page">이 페이지 <b id="bt-pageElapsed">0</b>초</div>
+        <div class="bt-elapsed" id="bt-total" title="총 경과">00:00</div>
+      </div>
+    </div>
+    <div class="pace" id="paceBar"><i id="paceFill"></i></div>
+    <div class="rec-set">이 페이지 권장 <input id="recInput" type="number" min="5" step="5" value="40"> 초 <span class="rec-hint">(발표자 설정·저장)</span></div>
+
+    <div class="media-box">
+      <div class="media-state" id="mediaState">이 페이지 영상 없음</div>
+      <div class="notes-tools">
+        <button class="btn" id="playMediaBtn" onclick="playMedia()" disabled>▶ 영상 (V)</button>
+        <button class="btn" onclick="openMediaDialog()">🎬 영상 첨부</button>
+      </div>
+    </div>
+
+    <div class="notes-tools">
+      <button class="btn" onclick="toggleEdit()" id="editBtn">✎ 편집 (E)</button>
+      <button class="btn" onclick="openBulk()">⤵ 일괄 입력</button>
+    </div>
+    <div class="notes-tools">
+      <button class="btn" onclick="Notes.exportJSON()">↓ 내보내기</button>
+      <button class="btn" onclick="document.getElementById('importFile').click()">↑ 가져오기</button>
+    </div>
+    <input type="file" id="importFile" accept="application/json" style="display:none;">
+
+    <div class="mini-list">
+      <div><b>①</b> 이 창은 연단 모니터에</div>
+      <div><b>②</b> ‘프로젝터에 띄우기’ → deck 창(코드 없이 자동)</div>
+      <div><b>③</b> 다른 기기 deck 는 3자리 코드 입력</div>
+      <div style="margin-top:8px;"><b>→/Space</b> 다음 · <b>←</b> 이전 · <b>E</b> 편집</div>
+    </div>
+  </div>
+
+  <div id="script-area">
+    <div id="toolbar">
+      <button title="굵게 (Ctrl+B)" onmousedown="fmt(event,'bold')"><b>B</b></button>
+      <button title="기울임 (Ctrl+I)" onmousedown="fmt(event,'italic')"><i>I</i></button>
+      <button title="밑줄 (Ctrl+U)" onmousedown="fmt(event,'underline')"><u>U</u></button>
+      <span class="tb-sep"></span>
+      <button title="글자 크게" onmousedown="fmt(event,'fontSize','5')">A▲</button>
+      <button title="글자 작게" onmousedown="fmt(event,'fontSize','2')">A▼</button>
+      <span class="tb-sep"></span>
+      <button class="sw" title="흰색(기본)" onmousedown="fmtColorVal(event,'#ffffff')" style="color:#fff">A</button>
+      <button class="sw" title="강조색 amber" onmousedown="fmtColorVal(event,'#F97316')" style="color:#F97316">A</button>
+      <button class="sw" title="빨강" onmousedown="fmtColorVal(event,'#ff453a')" style="color:#ff453a">A</button>
+      <button class="sw" title="파랑" onmousedown="fmtColorVal(event,'#3dd6ff')" style="color:#3dd6ff">A</button>
+      <button class="sw" title="초록" onmousedown="fmtColorVal(event,'#32d74b')" style="color:#32d74b">A</button>
+      <label class="sw pick" title="색 직접 선택"><input type="color" id="fontColor" value="#ffffff"></label>
+      <span class="tb-sep"></span>
+      <button title="글머리 기호" onmousedown="fmt(event,'insertUnorderedList')">• ―</button>
+      <button title="번호 목록" onmousedown="fmt(event,'insertOrderedList')">1.</button>
+      <span class="tb-sep"></span>
+      <button title="서식 지우기" onmousedown="fmt(event,'removeFormat')">✗</button>
+      <button class="tb-done" onmousedown="event.preventDefault(); commitEdit();">완료</button>
+    </div>
+    <div id="text-view" class="script-content"></div>
+    <div id="cover" onclick="coverHide()">
+      <div class="cv-eyebrow" id="cvEyebrow">STANDBY</div>
+      <div class="cv-title" id="cvTitle">PDF 텔레프롬프터</div>
+      <div class="cv-team" id="cvTeam"></div>
+      <div class="cv-clock" id="cv-clock">00:00:00</div>
+      <button class="cv-btn" onclick="event.stopPropagation(); coverHide();">▶ 발표 시작</button>
+      <div class="cv-hint">클릭 · Space · Enter 로 시작 — 프로젝터 슬라이드도 함께 켜집니다 &nbsp;|&nbsp; 발표 중 Esc 로 다시 가림</div>
+    </div>
+  </div>
+</div>
+
+<div class="hint" id="modeHint">PDF SYNC — 발표 창·연결된 기기가 함께 넘어갑니다</div>
+<div class="nav-guide">
+  <button class="nav-btn" onclick="changeFont(-3)" title="글자 작게 ( - )">A−</button>
+  <span id="fsLabel" class="fs-label">42px</span>
+  <button class="nav-btn" onclick="changeFont(3)" title="글자 크게 ( + )">A+</button>
+  <button class="nav-btn" onclick="goSlide(currentSlide-1)" style="margin-left:8px;">◀ PREV</button>
+  <button class="nav-btn" onclick="goSlide(currentSlide+1)">NEXT ▶</button>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/pdf-render.js"></script>
+<script src="js/notes.js"></script>
+<script src="js/sync.js"></script>
+<script>
+const CFG = window.PROMPTER_CONFIG;
+
+/* ===== 상태 ===== */
+let currentSlide = 0, total = 0, recSec = 40, defaultRec = 40;
+let mediaPlaying = false, _pendingMp4 = null;
+let deckWin = null, editing = false;
+const TARGET_SEC = CFG.targetSec;
+let slideEnteredAt = Date.now();
+let coverVisible = true, started = false, startTs = null, coverWasUp = false;
+
+/* ===== 시작 화면 / PDF 로드 ===== */
+function showStart(){ document.getElementById('start').classList.remove('hidden'); }
+function hideStart(){ document.getElementById('start').classList.add('hidden'); }
+
+async function handlePdf(file){
+  if(!file) return;
+  document.getElementById('thumbPh').innerText = '변환 중…';
+  try{
+    total = await PdfRender.loadPdf(file, file.name);
+    Notes.setDeck(file.name.replace(/\.pdf$/i,''));
+    afterPdfLoaded();
+    hideStart();
+  }catch(e){
+    alert('PDF를 불러오지 못했습니다: ' + e.message);
+  }
+}
+function afterPdfLoaded(){
+  document.getElementById('s-total').innerText = total || '–';
+  defaultRec = total ? Math.max(15, Math.round(TARGET_SEC/total)) : 40;
+  document.getElementById('s-file').innerText = PdfRender.name() || '—';
+  currentSlide = 0;
+  goSlide(0);
+}
+
+const dz = document.getElementById('dropzone');
+const pdfInput = document.getElementById('pdfFile');
+dz.onclick = ()=> pdfInput.click();
+pdfInput.onchange = (e)=>{ handlePdf(e.target.files[0]); e.target.value=''; };
+['dragenter','dragover'].forEach(ev=> dz.addEventListener(ev, (e)=>{ e.preventDefault(); dz.classList.add('drag'); }));
+['dragleave','drop'].forEach(ev=> dz.addEventListener(ev, (e)=>{ e.preventDefault(); dz.classList.remove('drag'); }));
+dz.addEventListener('drop', (e)=>{ const f=[...(e.dataTransfer.files||[])].find(f=>/pdf$/i.test(f.type)||/\.pdf$/i.test(f.name)); if(f) handlePdf(f); });
+
+/* ===== 가림막 ===== */
+function coverShow(){
+  coverVisible = true;
+  document.getElementById('cover').classList.remove('hidden');
+  document.getElementById('statusTag').innerText = started ? 'PAUSED' : 'STANDBY';
+  broadcast();
+}
+function coverHide(){
+  coverVisible = false;
+  document.getElementById('cover').classList.add('hidden');
+  if(!started){ started = true; startTs = Date.now(); slideEnteredAt = Date.now(); }
+  const hasNetworkDeck = host.deckFollowerCount() > 0;
+  if(deckWin && !deckWin.closed) document.getElementById('statusTag').innerText = 'LIVE — 프로젝터';
+  else if(hasNetworkDeck) document.getElementById('statusTag').innerText = 'LIVE — 연단 연동';
+  else toggleDeck();
+  broadcast();
+}
+
+/* ===== 슬라이드 이동 (+ 연단으로 이미지 전송) ===== */
+async function goSlide(idx, isExternal=false){
+  if(idx < 0 || idx >= total) return;
+  if(editing) commitEdit();
+  if(mediaPlaying) closeMediaOverlay();   // 페이지 넘기면 재생 중 영상 종료
+  currentSlide = idx;
+  slideEnteredAt = Date.now();
+  document.getElementById('s-num').innerText = String(idx+1).padStart(2,'0');
+  // 페이지별 권장시간 로드
+  recSec = Notes.getTime(idx) || defaultRec;
+  document.getElementById('recInput').value = recSec;
+  renderNote();
+  updateMediaUI();
+  await renderThumb(idx);
+  pushSlideImage(idx);   // 연단(deck)으로 페이지 이미지 전송
+  broadcast();
+}
+async function renderThumb(idx){
+  try{
+    const url = await PdfRender.renderPageDataURL(idx, 280, { type:'image/png' });
+    const img = document.getElementById('thumb');
+    img.src = url; img.style.display = 'block';
+    document.getElementById('thumbPh').style.display = 'none';
+  }catch(e){}
+}
+async function pushSlideImage(idx){
+  try{
+    const image = await PdfRender.renderPageDataURL(idx, CFG.deckImageWidth, { type:CFG.deckImageType, quality:CFG.deckImageQuality });
+    host.sendSlide({ type:'slide', idx, total, image });
+  }catch(e){}
+}
+
+/* ===== 대본 표시 / 서식 편집 ===== */
+function noteEmpty(){ const t=document.getElementById('text-view').textContent||''; return !t.trim().length; }
+function renderNote(){
+  const view = document.getElementById('text-view');
+  const html = Notes.get(currentSlide);
+  view.innerHTML = html || '';
+  view.classList.toggle('is-empty', !html || !view.textContent.trim().length);
+  document.getElementById('script-area').scrollTop = 0;
+}
+function toggleEdit(){ editing ? commitEdit() : openEdit(); }
+function openEdit(){
+  // 가림막이 떠 있으면 편집을 위해 잠시 내림(발표 시작/타이머는 건드리지 않음)
+  coverWasUp = coverVisible;
+  if(coverVisible) document.getElementById('cover').classList.add('hidden');
+  editing = true;
+  const view = document.getElementById('text-view');
+  view.contentEditable = 'true';
+  document.getElementById('script-area').classList.add('editing');
+  document.getElementById('editBtn').classList.add('active');
+  view.classList.toggle('is-empty', !view.textContent.trim().length);
+  view.focus();
+}
+function saveCurrent(){
+  const view = document.getElementById('text-view');
+  const html = view.textContent.trim().length ? view.innerHTML : '';
+  Notes.set(currentSlide, html);
+}
+function commitEdit(){
+  saveCurrent();
+  editing = false;
+  const view = document.getElementById('text-view');
+  view.contentEditable = 'false';
+  document.getElementById('script-area').classList.remove('editing');
+  document.getElementById('editBtn').classList.remove('active');
+  // 편집 전에 가림막이 떠 있었고 아직 발표 시작 전이면 다시 가림
+  if(coverWasUp && !started) document.getElementById('cover').classList.remove('hidden');
+  coverWasUp = false;
+  renderNote();
+  broadcast();
+}
+document.getElementById('text-view').addEventListener('input', ()=>{
+  if(!editing) return;
+  saveCurrent();
+  document.getElementById('text-view').classList.toggle('is-empty', !document.getElementById('text-view').textContent.trim().length);
+});
+// 서식 명령
+function fmt(e, cmd, val){ e.preventDefault(); document.getElementById('text-view').focus(); document.execCommand(cmd, false, val||null); saveCurrent(); }
+// 글자색: onmousedown + preventDefault 로 선택영역 유지한 채 적용(흰색 복원·임의 색 모두 가능)
+function fmtColorVal(e, color){ e.preventDefault(); document.getElementById('text-view').focus(); document.execCommand('styleWithCSS', false, true); document.execCommand('foreColor', false, color); saveCurrent(); }
+// 네이티브 색 선택기: 선택영역을 저장했다가 색 고르면 복원 후 적용
+let _savedRange = null;
+(function(){
+  const picker = document.getElementById('fontColor');
+  const lbl = picker.closest('label');
+  lbl.addEventListener('mousedown', ()=>{ const s=getSelection(); if(s && s.rangeCount) _savedRange = s.getRangeAt(0).cloneRange(); });
+  picker.addEventListener('input', ()=>{
+    document.getElementById('text-view').focus();
+    if(_savedRange){ const s=getSelection(); s.removeAllRanges(); s.addRange(_savedRange); }
+    document.execCommand('styleWithCSS', false, true);
+    document.execCommand('foreColor', false, picker.value);
+    saveCurrent();
+  });
+})();
+
+/* ===== 일괄 입력 ===== */
+function openBulk(){ document.getElementById('bulkText').value=''; document.getElementById('bulkMsg').innerText=''; document.getElementById('bulkPanel').classList.add('show'); document.getElementById('bulkText').focus(); }
+function closeBulk(){ document.getElementById('bulkPanel').classList.remove('show'); }
+function applyBulk(){
+  const txt = document.getElementById('bulkText').value;
+  const n = Notes.applyBulk(txt);
+  document.getElementById('bulkMsg').innerText = n ? `${n}개 페이지 대본을 적용했습니다.` : '인식된 페이지 구분이 없습니다. === 1 === 형식을 확인하세요.';
+  if(n){ renderNote(); broadcast(); setTimeout(closeBulk, 900); }
+}
+async function copyLLMPrompt(){
+  const prompt = Notes.llmPrompt(total);
+  try{ await navigator.clipboard.writeText(prompt); document.getElementById('bulkMsg').innerText='LLM 프롬프트를 복사했습니다. LLM에 붙여넣고 결과를 위 칸에 다시 붙여넣으세요.'; }
+  catch(e){ document.getElementById('bulkText').value = prompt; document.getElementById('bulkMsg').innerText='클립보드 권한이 없어 입력칸에 넣었습니다. 복사해 사용하세요.'; }
+}
+
+/* ===== 페이지별 권장시간 ===== */
+document.getElementById('recInput').addEventListener('change', ()=>{
+  const v = parseInt(document.getElementById('recInput').value, 10);
+  Notes.setTime(currentSlide, v > 0 ? v : 0);   // 0이면 기본값으로 복귀
+  recSec = (v > 0) ? v : defaultRec;
+});
+
+/* ===== 영상 (유튜브 / 로컬 mp4) ===== */
+function ytId(url){ const m = (url||'').match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/)([A-Za-z0-9_-]{6,})/); return m ? m[1] : null; }
+function currentMedia(){ return Notes.getMedia(currentSlide); }
+function updateMediaUI(){
+  const m = currentMedia();
+  const state = document.getElementById('mediaState');
+  const btn = document.getElementById('playMediaBtn');
+  if(m){ state.innerHTML = (m.kind==='youtube') ? '▶ 유튜브 영상 첨부됨' : ('▶ 로컬 영상: ' + (m.name||'mp4')); state.classList.add('has'); btn.disabled = false; }
+  else { state.innerText = '이 페이지 영상 없음'; state.classList.remove('has'); btn.disabled = true; }
+}
+function openMediaDialog(){
+  document.getElementById('mediaPageLbl').innerText = '· ' + (currentSlide+1) + '페이지';
+  const m = currentMedia();
+  document.getElementById('ytUrl').value = (m && m.kind==='youtube') ? m.url : '';
+  document.getElementById('mp4Name').innerText = (m && m.kind==='mp4') ? (m.name||'mp4 저장됨') : '선택된 파일 없음';
+  _pendingMp4 = null;
+  document.getElementById('mediaMsg').innerText = '';
+  document.getElementById('mediaPanel').classList.add('show');
+}
+function closeMediaDialog(){ document.getElementById('mediaPanel').classList.remove('show'); }
+document.getElementById('mp4File').addEventListener('change', (e)=>{ const f=e.target.files[0]; if(f){ _pendingMp4=f; document.getElementById('mp4Name').innerText=f.name; document.getElementById('ytUrl').value=''; } e.target.value=''; });
+async function saveMediaDialog(){
+  const yt = document.getElementById('ytUrl').value.trim();
+  const msg = document.getElementById('mediaMsg');
+  if(_pendingMp4){
+    const key = Notes.mediaKey(currentSlide);
+    const ok = await PdfRender.saveMedia(key, _pendingMp4);
+    if(!ok){ msg.innerText='저장 실패 — 정적 서버(localhost)/HTTPS에서 다시 시도하세요.'; return; }
+    Notes.setMedia(currentSlide, {kind:'mp4', key, name:_pendingMp4.name});
+    msg.innerText = '로컬 영상을 저장했습니다 (같은 PC deck에서 재생).';
+  } else if(yt){
+    const id = ytId(yt);
+    if(!id){ msg.innerText='유튜브 링크를 인식할 수 없습니다.'; return; }
+    Notes.setMedia(currentSlide, {kind:'youtube', url:yt, id});
+    msg.innerText = '유튜브 영상을 저장했습니다.';
+  } else { msg.innerText='유튜브 링크 입력 또는 mp4 선택이 필요합니다.'; return; }
+  updateMediaUI();
+  setTimeout(closeMediaDialog, 800);
+}
+function removeMedia(){
+  const m = currentMedia();
+  if(m && m.kind==='mp4') PdfRender.deleteMedia(m.key);
+  Notes.setMedia(currentSlide, null);
+  updateMediaUI();
+  document.getElementById('mediaMsg').innerText = '영상을 제거했습니다.';
+}
+function playMedia(){
+  const m = currentMedia(); if(!m) return;
+  const payload = (m.kind==='youtube')
+    ? { type:'media', action:'play', kind:'youtube', id: m.id || ytId(m.url) }
+    : { type:'media', action:'play', kind:'mp4', key: m.key };
+  host.sendMedia(payload);
+  mediaPlaying = true;
+  document.getElementById('modeHint').innerText = '▶ 영상 재생 중 — V/Esc 또는 페이지 이동 시 닫힘';
+}
+function closeMediaOverlay(){ if(mediaPlaying){ host.sendMedia({type:'media', action:'close'}); mediaPlaying=false; } }
+
+/* ===== 발표 창(deck.html) 열기/닫기 ===== */
+async function toggleDeck(){
+  const btn = document.getElementById('deckBtn'), status = document.getElementById('statusTag');
+  if(deckWin && !deckWin.closed){
+    deckWin.close(); deckWin = null;
+    btn.classList.remove('linked'); btn.innerText = '프로젝터에 슬라이드 띄우기';
+    status.innerText = 'STANDBY'; return;
+  }
+  let placed = false;
+  try{
+    if('getScreenDetails' in window){
+      const sd = await window.getScreenDetails();
+      const cur = sd.currentScreen;
+      const target = sd.screens.find(s => s.left !== cur.left || s.top !== cur.top) || cur;
+      document.getElementById('screenTag').innerText = '화면 ' + sd.screens.length;
+      const feat = `left=${target.availLeft},top=${target.availTop},width=${target.availWidth},height=${target.availHeight}`;
+      deckWin = window.open('deck.html', 'prompter_deck', feat);
+      try{ deckWin.moveTo(target.availLeft, target.availTop); deckWin.resizeTo(target.availWidth, target.availHeight); }catch(e){}
+      try{ deckWin.focus(); }catch(e){}
+      placed = (target !== cur);
+    }
+  }catch(e){}
+  if(!deckWin){ deckWin = window.open('deck.html', 'prompter_deck', 'width=1280,height=720'); }
+  btn.classList.add('linked'); btn.innerText = '발표 창 닫기';
+  status.innerText = placed ? 'LIVE — 프로젝터' : 'LIVE — 창 이동 필요';
+  document.getElementById('modeHint').innerText = placed
+    ? '슬라이드가 프로젝터에 떴습니다 — 그 창에서 F 한 번이면 풀스크린. 조작은 이 프롬프터에서.'
+    : '확장 모드가 아니거나 권한 거부 — 뜬 창을 프로젝터로 드래그한 뒤 F. 조작은 이 프롬프터에서.';
+  setTimeout(()=>{ pushSlideImage(currentSlide); broadcast(); }, 1200);
+}
+
+/* ===== 클릭 이동 ===== */
+document.getElementById('script-area').onclick = (e)=>{
+  if(coverVisible || editing) return;
+  if(e.target.closest('#toolbar')) return;
+  const sidebarW = 320;
+  if(e.clientX > (window.innerWidth + sidebarW)/2) goSlide(currentSlide+1);
+  else goSlide(currentSlide-1);
+};
+
+/* ===== 글자 크기 ===== */
+const FS_MIN = 24, FS_MAX = 88;
+let scriptFs = Notes.getFontSize();
+function applyFont(){
+  scriptFs = Math.max(FS_MIN, Math.min(FS_MAX, scriptFs));
+  document.documentElement.style.setProperty('--script-fs', scriptFs + 'px');
+  document.getElementById('fsLabel').innerText = scriptFs + 'px';
+  Notes.setFontSize(scriptFs);
+}
+function changeFont(d){ scriptFs += d; applyFont(); }
+
+/* ===== 키보드 ===== */
+window.onkeydown = (e)=>{
+  if(document.getElementById('bulkPanel').classList.contains('show')){ if(e.key==='Escape') closeBulk(); return; }
+  if(document.getElementById('mediaPanel').classList.contains('show')){ if(e.key==='Escape') closeMediaDialog(); return; }
+  if(editing){ if(e.key==='Escape') commitEdit(); return; }   // 편집 중엔 입력 우선
+  if(!document.getElementById('start').classList.contains('hidden')) return;
+  if(e.key==='+' || e.key==='='){ e.preventDefault(); changeFont(3); return; }
+  if(e.key==='-' || e.key==='_'){ e.preventDefault(); changeFont(-3); return; }
+  if(e.key==='v' || e.key==='V'){ e.preventDefault(); mediaPlaying ? closeMediaOverlay() : playMedia(); return; }
+  if(coverVisible){ if(e.key===' ' || e.key==='Enter'){ e.preventDefault(); coverHide(); } return; }
+  if(e.key==='Escape'){ if(mediaPlaying){ closeMediaOverlay(); } else coverShow(); return; }
+  if(e.key==='e' || e.key==='E'){ e.preventDefault(); toggleEdit(); return; }
+  if(e.key==='ArrowRight' || e.key===' ' || e.key==='PageDown'){ e.preventDefault(); goSlide(currentSlide+1); }
+  if(e.key==='ArrowLeft'  || e.key==='PageUp'){ e.preventDefault(); goSlide(currentSlide-1); }
+  if(e.key==='Home') goSlide(0);
+  if(e.key==='End')  goSlide(total-1);
+};
+
+/* ===== 동기화 호스트 ===== */
+const host = Sync.createHost({
+  onCommand: (cmd)=>{
+    if(cmd==='next') goSlide(currentSlide+1);
+    else if(cmd==='prev') goSlide(currentSlide-1);
+    else if(cmd==='first') goSlide(0);
+    else if(cmd==='toggleCover') (coverVisible ? coverHide() : coverShow());
+    else if(cmd==='media') (mediaPlaying ? closeMediaOverlay() : playMedia());
+  },
+  onDevices: ({phones, decks})=>{
+    const btn = document.getElementById('remoteBtn');
+    if(phones+decks>0){ setRemoteStat('on', `연결됨 ✓  📱 ${phones} · 🖥 ${decks}`); btn.classList.add('active'); }
+    else { setRemoteStat('off','기기 연결 대기 중 — QR/코드'); btn.classList.remove('active'); }
+  },
+  onReady: ({code, peerId})=>{
+    document.getElementById('rpCode').innerText = code;
+    renderQR('qrPhone', deckBase() + 'remote.html?id=' + peerId);
+    setRemoteStat('off','기기 연결 대기 중');
+  },
+  onStatus: (t)=> setRemoteStat('off', t)
+});
+
+function makeState(){
+  const diff = startTs ? Math.floor((Date.now()-startTs)/1000) : 0;
+  const rem = TARGET_SEC - diff, ar = Math.abs(rem);
+  return { type:'state', idx:currentSlide, total,
+    remain:`${rem<0?'-':''}${String(Math.floor(ar/60)).padStart(2,'0')}:${String(ar%60).padStart(2,'0')}`,
+    over: rem<0, covered: coverVisible, note: Notes.get(currentSlide) };
+}
+function broadcast(){ host.broadcast(makeState()); }
+function deckBase(){
+  if(CFG.hostedBase) return CFG.hostedBase.replace(/\/?$/, '/');
+  if(location.protocol === 'file:') return location.href.replace(/[^/]*$/, '');
+  return location.href.replace(/[^/]*(\?.*)?$/, '');
+}
+function toggleRemote(){
+  const panel = document.getElementById('remotePanel');
+  if(!panel.classList.contains('hidden')){ panel.classList.add('hidden'); return; }
+  panel.classList.remove('hidden');
+  if(!host.getCode()) host.startPeer();
+}
+function setRemoteStat(kind, text){ const el=document.getElementById('rpStat'); el.className='rp-stat '+kind; el.innerText=text; }
+function renderQR(elId, url){
+  const box = document.getElementById(elId); box.innerHTML='';
+  try{ new QRCode(box, { text:url, width:150, height:150, colorDark:'#000', colorLight:'#fff' }); }
+  catch(e){ box.innerHTML = '<a href="'+url+'" style="font-size:9px;word-break:break-all;color:#000;padding:6px;">'+url+'</a>'; }
+}
+
+/* ===== 가져오기 ===== */
+document.getElementById('importFile').addEventListener('change', async (e)=>{
+  const f = e.target.files[0]; if(!f) return;
+  try{ const n = await Notes.importJSON(f); renderNote(); broadcast(); alert(`${n}개 대본을 가져왔습니다.`); }
+  catch(err){ alert('가져오기 실패: ' + err.message); }
+  e.target.value = '';
+});
+
+/* ===== 타이머 ===== */
+function fmtHMS(t){const h=String(Math.floor(t/3600)).padStart(2,'0');const m=String(Math.floor((t%3600)/60)).padStart(2,'0');const s=String(t%60).padStart(2,'0');return `${h}:${m}:${s}`;}
+function fmtMS(t){t=Math.max(0,t);return `${String(Math.floor(t/60)).padStart(2,'0')}:${String(t%60).padStart(2,'0')}`;}
+setInterval(()=>{
+  const now = new Date();
+  const clockStr = now.toTimeString().split(' ')[0];
+  document.getElementById('clock').innerText = clockStr;
+  document.getElementById('cv-clock').innerText = clockStr;
+
+  const diff = startTs ? Math.floor((Date.now()-startTs)/1000) : 0;
+  document.getElementById('elapsed').innerText = fmtHMS(diff);
+  document.getElementById('bt-total').innerText = fmtMS(diff);
+  const rem = TARGET_SEC - diff, ar = Math.abs(rem);
+  document.getElementById('bt-remain').innerText = `${rem<0?'-':''}${fmtMS(ar)}`;
+  document.getElementById('bigTimer').classList.toggle('is-over', rem < 0);
+
+  const slideElapsed = started ? Math.floor((Date.now()-slideEnteredAt)/1000) : 0;
+  document.getElementById('bt-pageElapsed').innerText = slideElapsed;
+  const pct = Math.min(100, (slideElapsed/recSec)*100);
+  document.getElementById('paceFill').style.width = pct + '%';
+  document.getElementById('paceBar').classList.toggle('is-over', slideElapsed > recSec);
+
+  broadcast();
+}, 1000);
+
+/* ===== 확장 디스플레이 감지 ===== */
+function detectScreens(){
+  const tag = document.getElementById('screenTag');
+  try{
+    if('isExtended' in window.screen){
+      if(window.screen.isExtended){ tag.innerText = '확장 ✓'; tag.style.borderColor = '#0a0'; }
+      else { tag.innerText = '단일 화면'; tag.style.borderColor = 'var(--accent)'; }
+    } else tag.innerText = '화면 ?';
+  }catch(e){ tag.innerText = '화면 ?'; }
+}
+if('screen' in window && 'addEventListener' in window.screen){ try{ window.screen.addEventListener('change', detectScreens); }catch(e){} }
+
+/* ===== 초기화 ===== */
+function applyCover(){
+  document.getElementById('cvEyebrow').innerText = CFG.eyebrow || 'STANDBY';
+  document.getElementById('cvTitle').innerHTML = CFG.appTitle || 'PDF 텔레프롬프터';
+  document.getElementById('cvTeam').innerText = CFG.team || '';
+}
+async function init(){
+  applyFont(); detectScreens(); applyCover();
+  const ok = await PdfRender.loadStored();   // 저장된 PDF 있으면 자동 로드
+  if(ok){
+    total = PdfRender.pageCount();
+    afterPdfLoaded();
+    hideStart();
+  }
+}
+window.onload = init;
+</script>
+</body>
+</html>

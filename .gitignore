@@ -1,0 +1,10 @@
+# 하네스/상태
+.omc/
+.claude/
+
+# 테스트/임시 산출물
+_test.pdf
+*.local.pdf
+.playwright-mcp/
+.DS_Store
+Thumbs.db

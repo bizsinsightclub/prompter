@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>연단 슬라이드 · PDF 텔레프롬프터</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;background:#0E0E0E;overflow:hidden;font-family:'Inter','Noto Sans KR',sans-serif;}
+  #stage{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;background:#0E0E0E;}
+  #slide{max-width:100vw;max-height:100vh;object-fit:contain;display:none;}
+  #waiting{color:#555;font-size:18px;font-weight:700;}
+
+  #status{position:fixed;left:16px;bottom:14px;z-index:10;display:flex;align-items:center;gap:8px;
+    font-size:12px;letter-spacing:0.04em;color:#888;background:rgba(0,0,0,.6);border:1px solid #262626;
+    border-radius:999px;padding:7px 14px;transition:opacity .5s;}
+  #status.hidden{opacity:0;pointer-events:none;}
+  #status .dot{width:9px;height:9px;border-radius:50%;background:#888;}
+  #status .dot.ok{background:#0c0;} #status .dot.bad{background:#e33;}
+
+  #gate{position:fixed;inset:0;z-index:30;background:#0E0E0E;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;padding:40px;color:#fff;}
+  #gate.hidden{display:none;}
+  #gate h1{font-size:30px;font-weight:900;margin-bottom:12px;}
+  #gate p{font-size:15px;color:#888;line-height:1.7;max-width:520px;word-break:keep-all;margin-bottom:30px;}
+  #codeInput{width:240px;font-size:64px;font-weight:900;letter-spacing:0.3em;text-align:center;
+    background:#000;border:2px solid #262626;border-radius:16px;color:#F97316;padding:14px 0;
+    font-family:'Inter',monospace;outline:none;}
+  #codeInput:focus{border-color:#F97316;}
+  #gate .go{margin-top:24px;background:#F97316;color:#000;border:none;border-radius:12px;
+    padding:16px 48px;font-size:18px;font-weight:900;cursor:pointer;font-family:inherit;}
+  #gate .err{margin-top:16px;color:#e33;font-size:14px;font-weight:700;min-height:20px;}
+  #gate .hint{margin-top:28px;font-size:13px;color:#555;}
+
+  /* 영상 오버레이 */
+  #media{position:fixed;inset:0;z-index:40;background:#000;display:flex;align-items:center;justify-content:center;}
+  #media.hidden{display:none;}
+  #mediaInner{width:100%;height:100%;display:flex;align-items:center;justify-content:center;}
+  #mediaInner iframe,#mediaInner video{width:100%;height:100%;border:0;background:#000;object-fit:contain;}
+  #mediaInner .mmsg{color:#aaa;font-size:20px;font-weight:700;text-align:center;line-height:1.6;}
+  #mediaClose{position:fixed;top:18px;right:18px;z-index:41;background:rgba(0,0,0,.6);color:#fff;border:1px solid #333;border-radius:999px;padding:9px 16px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;}
+</style>
+</head>
+<body>
+
+<div id="stage"><img id="slide" alt="슬라이드"><div id="waiting">프롬프터 연결 대기 중…</div></div>
+<div id="media" class="hidden"><div id="mediaInner"></div><button id="mediaClose" onclick="hideMedia()">✕ 닫기</button></div>
+<div id="status"><span class="dot" id="dot"></span><span id="stxt">연결 준비 중…</span></div>
+
+<div id="gate">
+  <h1>연단 슬라이드 연결</h1>
+  <p>노트북 프롬프터의 <b>🔗 기기 연결</b> 패널에 표시된 <b>3자리 코드</b>를 입력하세요.<br>
+     같은 노트북에서 ‘프로젝터에 띄우기’로 연 창은 코드 없이 자동 연결됩니다.</p>
+  <input id="codeInput" inputmode="numeric" maxlength="3" placeholder="000" autocomplete="off">
+  <button class="go" id="goBtn">연결</button>
+  <div class="err" id="gateErr"></div>
+  <div class="hint">슬라이드 이미지는 프롬프터가 직접 전송합니다 (이 기기에 PDF 불필요)</div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/pdf-render.js"></script>
+<script src="js/sync.js"></script>
+<script>
+const CFG = window.PROMPTER_CONFIG || {};
+const params = new URLSearchParams(location.search);
+let connected = false;
+const slideImg = document.getElementById('slide');
+const waiting = document.getElementById('waiting');
+
+function showImage(dataUrl){
+  if(!dataUrl) return;
+  slideImg.src = dataUrl;
+  slideImg.style.display = 'block';
+  waiting.style.display = 'none';
+}
+function status(text, state){
+  document.getElementById('stxt').innerText = text;
+  document.getElementById('dot').className = 'dot' + (state==='ok'?' ok':state==='bad'?' bad':'');
+}
+function hideStatusSoon(){ setTimeout(()=> document.getElementById('status').classList.add('hidden'), 2500); }
+function gateOff(){ document.getElementById('gate').classList.add('hidden'); }
+
+function onMessage(d){
+  if(d.type === 'slide'){ connected = true; gateOff(); showImage(d.image); }
+  else if(d.type === 'state'){ connected = true; gateOff(); }
+  else if(d.type === 'media'){ if(d.action==='play') showMedia(d); else hideMedia(); }
+}
+
+/* 영상 오버레이 */
+async function showMedia(d){
+  const inner = document.getElementById('mediaInner');
+  inner.innerHTML = '';
+  if(d.kind === 'youtube'){
+    const ifr = document.createElement('iframe');
+    ifr.src = 'https://www.youtube.com/embed/' + d.id + '?' + (CFG.youtubeParams || 'autoplay=1');
+    ifr.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+    ifr.allowFullscreen = true;
+    inner.appendChild(ifr);
+  } else if(d.kind === 'mp4'){
+    const url = await PdfRender.loadMediaURL(d.key);
+    if(!url){ inner.innerHTML = '<div class="mmsg">이 기기에 로컬 영상이 없습니다.<br>같은 PC deck에서 재생하거나, 유튜브 링크를 사용하세요.</div>'; }
+    else { const v = document.createElement('video'); v.src = url; v.autoplay = true; v.controls = true; inner.appendChild(v); }
+  }
+  document.getElementById('media').classList.remove('hidden');
+}
+function hideMedia(){
+  document.getElementById('media').classList.add('hidden');
+  document.getElementById('mediaInner').innerHTML = '';   // 정지(iframe/video 제거)
+}
+
+/* 같은 PC: BroadcastChannel 자동 (코드 불필요) */
+Sync.listenBroadcast((d)=>{
+  if(!connected){ status('연결됨 ✓ (같은 PC)','ok'); hideStatusSoon(); }
+  onMessage(d);
+});
+
+/* 다른 기기: 3자리 코드 → PeerJS */
+let client = null;
+function connectWithCode(code){
+  if(!/^\d{1,3}$/.test(code)){ document.getElementById('gateErr').innerText = '3자리 숫자를 입력하세요.'; return; }
+  code = code.padStart(3,'0');
+  document.getElementById('gateErr').innerText = '';
+  status('연결 중…','');
+  client = Sync.connectPeer(Sync.sessionFromCode(code), 'deck', {
+    onMessage: (d)=>{ status('연결됨 ✓ — 프롬프터를 따라갑니다','ok'); onMessage(d); hideStatusSoon(); },
+    onStatus: (st, txt)=>{ status(txt, st); if(st==='bad' && !connected) document.getElementById('gateErr').innerText = txt + ' — 코드·핫스팟 확인'; }
+  });
+}
+document.getElementById('goBtn').onclick = ()=> connectWithCode(document.getElementById('codeInput').value);
+document.getElementById('codeInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') connectWithCode(e.target.value); });
+
+const pre = params.get('code');
+if(pre){ document.getElementById('codeInput').value = pre; connectWithCode(pre); }
+else { setTimeout(()=>{ if(!connected) document.getElementById('codeInput').focus(); }, 400); }
+
+document.onmousemove = ()=>{ const s=document.getElementById('status'); s.classList.remove('hidden'); clearTimeout(window._h); window._h=setTimeout(()=>s.classList.add('hidden'),2000); };
+</script>
+</body>
+</html>

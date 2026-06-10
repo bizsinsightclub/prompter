@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>리모컨 · PDF 텔레프롬프터</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+  :root{ --bg:#000; --fg:#fff; --dim:#777; --accent:#F97316; --panel:#141414; --border:#262626; }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;}
+  html,body{height:100%;overflow:hidden;}
+  body{background:var(--bg);color:var(--fg);font-family:'Inter','Noto Sans KR',sans-serif;display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);}
+  .top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);}
+  .conn{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--dim);letter-spacing:0.04em;}
+  .dot{width:9px;height:9px;border-radius:50%;background:#888;}
+  .dot.ok{background:#0c0;} .dot.bad{background:#e33;}
+  .pageno{font-size:15px;font-weight:900;font-variant-numeric:tabular-nums;}
+  .pageno .tot{color:var(--dim);font-weight:700;}
+  .info{padding:20px 22px 8px;}
+  .timer{font-size:34px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;}
+  .timer.over{color:#e33;}
+  .timer .cap{font-size:12px;color:var(--dim);font-weight:700;letter-spacing:0.1em;margin-right:8px;}
+  .note{margin-top:14px;font-size:15px;color:#bbb;line-height:1.55;word-break:keep-all;max-height:22vh;overflow-y:auto;}
+  .note b{color:#fff;}
+  .pad{flex:1;display:flex;gap:10px;padding:14px;min-height:0;}
+  .pad button{flex:1;border:none;border-radius:18px;font-family:inherit;font-size:22px;font-weight:900;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:transform .05s, background .1s;}
+  .pad .prev{background:var(--panel);border:1px solid var(--border);}
+  .pad .next{background:var(--accent);color:#000;}
+  .pad button:active{transform:scale(0.97);}
+  .pad .arrow{font-size:54px;line-height:1;}
+  .pad .cap{font-size:14px;letter-spacing:0.08em;opacity:.85;}
+  .foot{display:flex;gap:10px;padding:0 14px 16px;}
+  .foot button{flex:1;background:#000;border:1px solid var(--border);color:#fff;border-radius:14px;padding:16px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;}
+  .foot button:active{background:#1a1a1a;}
+  .foot .start{border-color:var(--accent);color:var(--accent);}
+  #wait{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;z-index:10;}
+  #wait.hidden{display:none;}
+  #wait .big{font-size:22px;font-weight:900;margin-bottom:14px;}
+  #wait .sub{font-size:14px;color:var(--dim);line-height:1.6;word-break:keep-all;}
+  #wait .spin{width:34px;height:34px;border:3px solid #333;border-top-color:var(--accent);border-radius:50%;margin-bottom:24px;animation:sp 0.8s linear infinite;}
+  @keyframes sp{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="conn"><span class="dot" id="dot"></span><span id="connText">연결 중…</span></div>
+  <div class="pageno"><span id="num">–</span><span class="tot"> / <span id="tot">–</span></span></div>
+</div>
+
+<div class="info">
+  <div class="timer" id="timer"><span class="cap">남은 시간</span><span id="remain">18:00</span></div>
+  <div class="note" id="note"></div>
+</div>
+
+<div class="pad">
+  <button class="prev" id="prev"><span class="arrow">◀</span><span class="cap">이전</span></button>
+  <button class="next" id="nextBtn"><span class="arrow">▶</span><span class="cap">다음</span></button>
+</div>
+
+<div class="foot">
+  <button class="start" id="coverBtn">▶ 시작 / 가림</button>
+  <button id="mediaBtn">🎬 영상</button>
+  <button id="firstBtn">⤒ 처음으로</button>
+</div>
+
+<div id="wait">
+  <div class="spin"></div>
+  <div class="big">노트북에 연결 중…</div>
+  <div class="sub">프롬프터 화면에서 <b>🔗 기기 연결</b> 버튼을 켜고<br>QR이 떠 있는지 확인하세요.<br><br>연결이 안 되면 노트북과 폰을<br><b>같은 핫스팟</b>에 두고 새로고침.</div>
+</div>
+
+<script src="js/sync.js"></script>
+<script>
+const hostId = new URLSearchParams(location.search).get('id');
+let client = null;
+
+function setConn(state, text){
+  document.getElementById('dot').className = 'dot' + (state==='ok'?' ok':state==='bad'?' bad':'');
+  document.getElementById('connText').innerText = text;
+}
+function buzz(ms){ try{ navigator.vibrate && navigator.vibrate(ms); }catch(e){} }
+
+if(!hostId){
+  document.getElementById('wait').innerHTML = '<div class="big">잘못된 접속</div><div class="sub">QR 코드로 다시 접속하세요.</div>';
+} else {
+  client = Sync.connectPeer(hostId, 'remote', {
+    onOpen: ()=>{ setConn('ok','연결됨'); document.getElementById('wait').classList.add('hidden'); buzz(40); },
+    onMessage: (d)=> render(d),
+    onStatus: (st, txt)=>{
+      setConn(st, txt);
+      if(st==='bad'){ const s=document.querySelector('#wait .sub'); if(s) s.innerHTML = txt + '<br>같은 핫스팟인지 확인 후 새로고침.'; }
+    }
+  });
+}
+
+function send(cmd){ if(client){ client.send(cmd); buzz(20); } }
+document.getElementById('prev').onclick    = ()=> send('prev');
+document.getElementById('nextBtn').onclick = ()=> send('next');
+document.getElementById('coverBtn').onclick= ()=> send('toggleCover');
+document.getElementById('mediaBtn').onclick= ()=> send('media');
+document.getElementById('firstBtn').onclick= ()=> send('first');
+
+window.onkeydown = (e)=>{
+  if(['ArrowRight',' ','PageDown'].includes(e.key)) send('next');
+  if(['ArrowLeft','PageUp'].includes(e.key)) send('prev');
+};
+
+function render(d){
+  if(d.type && d.type !== 'state') return;   // 슬라이드 이미지 메시지는 폰에서 무시
+  document.getElementById('num').innerText   = String(d.idx+1).padStart(2,'0');
+  document.getElementById('tot').innerText   = d.total;
+  document.getElementById('remain').innerText= d.remain || '–';
+  document.getElementById('timer').classList.toggle('over', !!d.over);
+  document.getElementById('coverBtn').innerText = d.covered ? '▶ 발표 시작' : '⏸ 가림';
+  document.getElementById('note').innerHTML = d.note || '';   // 노트는 이미 HTML
+}
+
+async function keepAwake(){ try{ if('wakeLock' in navigator) await navigator.wakeLock.request('screen'); }catch(e){} }
+keepAwake();
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') keepAwake(); });
+</script>
+</body>
+</html>
