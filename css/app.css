@@ -128,8 +128,8 @@ header { padding: 18px 36px; background: #000; display: flex; justify-content: s
 .big-timer .bt-elapsed { font-size: 28px; font-weight: 900; font-variant-numeric: tabular-nums; color: #fff; }
 .big-timer .bt-elapsed.over { color: var(--over); }
 
-/* ===== 서식 툴바 (편집 모드) ===== */
-#toolbar { display: none; position: absolute; top: 14px; left: 48px; right: 48px; z-index: 5;
+/* ===== 서식 툴바 (편집 모드) — 흐름 배치라 줄 수에 따라 본문이 자동으로 내려감 ===== */
+#toolbar { display: none; margin-bottom: 16px; z-index: 5;
   background: #161616; border: 1px solid var(--border); border-radius: 12px; padding: 8px 10px; gap: 4px; flex-wrap: wrap; align-items: center; }
 #script-area.editing #toolbar { display: flex; }
 #toolbar button { background: #000; border: 1px solid var(--border); color: #ddd; border-radius: 8px; min-width: 34px; height: 34px; padding: 0 9px; font-size: 14px; font-weight: 800; cursor: pointer; font-family: inherit; }
@@ -137,8 +137,7 @@ header { padding: 18px 36px; background: #000; display: flex; justify-content: s
 #toolbar .tb-sep { width: 1px; height: 22px; background: var(--border); margin: 0 4px; }
 #toolbar .tb-done { margin-left: auto; background: var(--accent); color: #000; border-color: var(--accent); font-weight: 900; padding: 0 14px; }
 
-/* 편집 시 본문 위쪽 여백(툴바 자리) */
-#script-area.editing { cursor: default; padding: 124px 48px 36px; }   /* 2줄 툴바 높이만큼 확보 */
+#script-area.editing { cursor: default; padding: 40px 48px; }
 .script-content { outline: none; }
 .script-content.is-empty::before { content: '이 페이지에 저장된 대본이 없습니다. 편집(E) 으로 입력하거나, 일괄 입력으로 한 번에 붙여넣으세요.'; color: var(--dim); font-size: 24px; font-weight: 400; }
 .script-content[contenteditable="true"] { font-size: 26px; line-height: 1.6; }
