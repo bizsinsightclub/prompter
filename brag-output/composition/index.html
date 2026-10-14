@@ -1,0 +1,931 @@
+<!doctype html>
+<html lang="ko" data-resolution="landscape">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1920, height=1080" />
+<title>PDF 텔레프롬프터 — 소개 영상</title>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+@font-face { font-family: 'Pretendard Variable'; src: url('assets/fonts/PretendardVariable.woff2') format('woff2'); font-weight: 45 920; font-display: block; }
+:root {
+  --bg: #0b0d10; --panel: #15181d; --panel-2: #1c2027;
+  --text: #eceef1; --text-2: #a9afb8; --dim: #868d97;
+  --border: #2a2f37; --border-ui: #646c78;
+  --accent: #F97316; --over: #ff5a4f; --ok: #3fd27a; --ok-bg: #10251a; --fast: #4cc9f0;
+  --font: 'Pretendard Variable', sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+body { font-family: var(--font); color: var(--text); font-variant-numeric: tabular-nums; }
+#root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--bg); }
+
+/* ===== 큰 작업대 (카메라가 이 위를 움직인다) ===== */
+#world { position: absolute; left: 0; top: 0; width: 7400px; height: 3300px; transform-origin: 0 0; background: var(--bg); }
+.abs { position: absolute; }
+
+/* ----- 1. 종이 대본 ----- */
+#paper { left: 360px; top: 380px; width: 1000px; height: 1280px; background: #f3f0e8; border-radius: 6px; padding: 90px 90px; color: #26231e; box-shadow: 0 40px 120px rgba(0,0,0,.55); }
+#paper .ph { display: flex; justify-content: space-between; font-size: 26px; font-weight: 700; color: #6b655a; border-bottom: 2px solid #d9d3c5; padding-bottom: 22px; }
+#paperText { margin-top: 44px; font-size: 38px; line-height: 76px; font-weight: 500; word-break: keep-all; }
+#paperText b { font-weight: 800; }
+#marker { left: 70px; top: 0; width: 860px; height: 64px; background: rgba(249,115,22,.30); border-radius: 6px; }
+#watch { left: 1500px; top: 640px; width: 760px; height: 420px; background: var(--panel); border: 2px solid var(--border); border-radius: 18px; padding: 44px 56px; }
+#watch .wl { font-size: 34px; font-weight: 700; color: var(--text-2); }
+#watchNum { font-size: 168px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; color: #fff; margin-top: 10px; }
+#watch .wt { font-size: 38px; font-weight: 700; color: var(--text-2); margin-top: 8px; }
+#watchRed { left: 0; top: 0; width: 100%; height: 100%; border: 3px solid var(--over); border-radius: 18px; opacity: 0; }
+
+/* PDF 칩 */
+#chip { left: 0; top: 0; width: 520px; height: 120px; background: #fff; border-radius: 14px; display: flex; align-items: center; gap: 20px; padding: 0 26px; box-shadow: 0 20px 60px rgba(0,0,0,.5); opacity: 0; }
+#chip .ci { width: 64px; height: 80px; background: #e2231a; border-radius: 8px; color: #fff; font-size: 20px; font-weight: 800; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 10px; }
+#chip .cn { font-size: 26px; font-weight: 800; color: #1a1a1a; }
+#chip .cs { font-size: 21px; font-weight: 600; color: #4f4f4f; margin-top: 4px; }
+
+/* ----- 2. 노트북 = 프롬프터 앱 (prompter.html · css/app.css 그대로) ----- */
+#bezel { left: 2766px; top: 466px; width: 1988px; height: 1148px; background: #1a1d22; border: 2px solid #2f343c; border-radius: 30px; }
+#app { left: 2800px; top: 500px; width: 1920px; height: 1080px; background: var(--bg); overflow: hidden; }
+#app header { position: absolute; left: 0; top: 0; width: 1920px; height: 72px; padding: 0 28px; background: var(--panel); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+.time-box { display: flex; gap: 24px; align-items: center; font-size: 15px; color: var(--text-2); white-space: nowrap; }
+.time-box b { color: var(--text); margin-left: 8px; font: 600 19px var(--font); }
+.head-right { display: flex; gap: 10px; align-items: center; }
+.head-sep { width: 1px; height: 30px; background: var(--border); margin: 0 4px; }
+.btn { position: relative; background: var(--panel-2); color: var(--text); border: 1px solid var(--border-ui); border-radius: 6px; height: 44px; padding: 0 16px; font-size: 15px; font-weight: 700; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
+.btn.q { background: transparent; border-color: transparent; color: var(--text-2); }
+.btn.primary { background: var(--accent); color: #111; border-color: var(--accent); }
+kbd { font: 600 12px var(--font); color: var(--text-2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; margin-left: 4px; }
+.status-tag { position: relative; font-size: 14px; font-weight: 700; color: var(--text-2); border: 1px solid var(--border-ui); border-radius: 4px; padding: 4px 10px; }
+.swap { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0; border-radius: inherit; }
+#micOn { border: 2px solid var(--ok); color: var(--ok); background: var(--ok-bg); gap: 8px; font-size: 15px; font-weight: 700; }
+#micOn i { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); display: block; }
+#statusTag { min-width: 150px; text-align: center; }
+#liveTag { background: var(--panel); color: var(--ok); white-space: nowrap; border-radius: 4px; }
+
+#prepMenu { left: 1300px; top: 66px; width: 300px; background: var(--panel); border: 1px solid var(--border-ui); border-radius: 8px; padding: 6px; box-shadow: 0 24px 60px rgba(0,0,0,.6); display: flex; flex-direction: column; opacity: 0; }
+#prepMenu .mi { font-size: 15px; font-weight: 500; padding: 11px 12px; border-radius: 5px; color: var(--text); }
+#prepMenu hr { border: 0; border-top: 1px solid var(--border); margin: 6px 4px; }
+
+#sidebar { left: 0; top: 72px; width: 400px; height: 1008px; background: var(--panel); border-right: 1px solid var(--border); }
+.sb-pn { padding: 18px 24px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
+.pn-h { display: flex; justify-content: space-between; align-items: center; font-size: 15px; font-weight: 700; color: var(--text-2); }
+.thumb { width: 352px; height: 162px; border: 1px solid var(--border); background: var(--bg); position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.slide-meta { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.slide-num { position: relative; font: 700 42px/1 var(--font); letter-spacing: -0.03em; color: var(--text); white-space: nowrap; }
+.slide-num .total { font-size: 20px; color: var(--dim); }
+.slide-file { font-size: 14px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 190px; }
+.target-set { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 500; color: var(--text-2); }
+.inbox { display: inline-block; width: 70px; background: var(--bg); border: 1px solid var(--border-ui); color: var(--accent); border-radius: 4px; padding: 5px 8px; font: 700 17px var(--font); text-align: center; }
+.bt-remain { position: relative; font: 700 80px/1 var(--font); letter-spacing: -0.03em; color: var(--accent); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; }
+.bt-cells { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--border); border-radius: 6px; }
+.bt-cells > div { padding: 8px 14px; font-size: 14px; color: var(--text-2); display: flex; flex-direction: column; }
+.bt-cells > div + div { border-left: 1px solid var(--border); }
+.bt-cells b { font: 700 24px var(--font); color: var(--text); }
+.bt-cells b small { font-size: 15px; font-weight: 500; color: var(--text-2); margin-left: 3px; }
+.pc-head { display: flex; justify-content: space-between; align-items: center; }
+.pc-cap { font-size: 15px; font-weight: 700; color: var(--text-2); }
+.pc-alloc { font-size: 15px; color: var(--text-2); display: flex; align-items: center; gap: 6px; }
+.pc-alloc .inbox { color: var(--accent); }
+.pc-link { background: var(--panel-2); border: 1px solid var(--border-ui); color: var(--text); border-radius: 6px; padding: 6px 12px; font-size: 14px; font-weight: 700; }
+.pc-row { display: grid; grid-template-columns: 36px 1fr 56px; align-items: center; gap: 10px; }
+.pc-lbl { font-size: 15px; color: var(--text-2); }
+.pc-bar { height: 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; position: relative; }
+.pc-bar > i { display: block; position: absolute; left: 0; top: 0; height: 100%; width: 100%; transform-origin: 0 50%; }
+.pc-bar.read > i { background: var(--accent); }
+.pc-bar.time > i { background: #a3a9b2; }
+.pc-val { font: 700 16px var(--font); text-align: right; }
+.st-wrap { position: relative; height: 30px; }
+.pc-status { position: absolute; left: 0; top: 0; font-size: 16px; font-weight: 700; line-height: 1.4; padding: 3px 11px; border: 1px solid currentColor; border-radius: 4px; white-space: nowrap; }
+.pc-status.ok { color: var(--ok); }
+.pc-status.dim { color: var(--text-2); font-weight: 500; font-size: 15px; border: 0; padding: 3px 0; }
+.sub-wrap { position: relative; height: 21px; }
+.pc-sub { position: absolute; left: 0; top: 0; font-size: 14px; color: var(--text-2); line-height: 1.45; white-space: nowrap; }
+
+#scriptArea { left: 400px; top: 72px; width: 1520px; height: 936px; background: var(--bg); padding: 88px 96px 48px; overflow: hidden; }
+.script-content { font-size: 42px; font-weight: 400; line-height: 1.7; word-break: keep-all; color: #fff; }
+.script-content b { font-weight: 900; text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 8px; text-decoration-thickness: 3px; }
+.w { border-radius: 6px; }
+#script1, #script2, #script12 { position: absolute; left: 96px; top: 88px; width: 1328px; opacity: 0; }
+#scriptEmpty { position: absolute; left: 96px; top: 88px; width: 1328px; color: var(--dim); font-size: 24px; line-height: 1.7; word-break: keep-all; }
+#voiceBar { left: 760px; top: 14px; display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--border-ui); border-radius: 6px; padding: 6px 8px 6px 14px; font-size: 15px; color: var(--text-2); opacity: 0; width: 732px; }
+.vb-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ok); flex-shrink: 0; }
+.vb-state { font-weight: 700; color: var(--text); white-space: nowrap; }
+.vb-lang { font-size: 14px; font-weight: 700; padding: 2px 9px; border-radius: 4px; border: 1px solid #2f5a7a; color: #8fd0ff; white-space: nowrap; }
+.vb-mode { background: var(--bg); color: var(--text); border: 1px solid var(--border-ui); border-radius: 4px; padding: 5px 8px; font-size: 14px; white-space: nowrap; }
+.vb-heard { position: relative; flex: 1; height: 22px; overflow: hidden; }
+.vb-heard span { position: absolute; left: 0; top: 0; white-space: nowrap; color: var(--text-2); opacity: 0; }
+
+#cover { left: 0; top: 0; width: 1520px; height: 936px; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.cv-eyebrow { font-size: 14px; letter-spacing: 0.2em; color: var(--text-2); font-weight: 700; }
+.cv-title { font-size: 40px; font-weight: 900; color: #fff; margin-top: 18px; }
+.cv-clock { font: 700 64px var(--font); color: #fff; margin-top: 40px; letter-spacing: -0.02em; }
+.cv-btn { margin-top: 40px; background: var(--accent); color: #111; border-radius: 6px; padding: 18px 44px; font-size: 20px; font-weight: 900; }
+.cv-hint { margin-top: 20px; font-size: 15px; color: var(--text-2); }
+
+#foot { left: 400px; top: 1008px; width: 1520px; height: 72px; display: flex; justify-content: space-between; align-items: center; padding: 0 28px; background: var(--panel); border-top: 1px solid var(--border); }
+.hint { font-size: 15px; color: var(--dim); }
+.nav-guide { display: flex; gap: 10px; align-items: center; }
+.nav-btn { background: var(--panel-2); color: var(--text); border: 1px solid var(--border-ui); border-radius: 6px; height: 44px; padding: 0 16px; font-size: 16px; font-weight: 700; display: inline-flex; align-items: center; }
+.nav-btn.big { height: 54px; padding: 0 28px; font-size: 18px; }
+.fs-label { font: 600 15px var(--font); color: var(--text-2); min-width: 56px; text-align: center; }
+.nav-sep { width: 1px; height: 30px; background: var(--border); margin: 0 6px; }
+
+/* 시작 화면 */
+#start { left: 0; top: 0; width: 1920px; height: 1080px; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px; }
+.s-eyebrow { font-size: 14px; letter-spacing: 0.2em; color: var(--text-2); font-weight: 700; }
+#start h1 { font-size: 38px; font-weight: 900; margin: 16px 0 10px; color: #fff; }
+#start p { font-size: 16px; color: var(--text-2); line-height: 1.7; max-width: 540px; word-break: keep-all; }
+#dropzone { position: relative; margin-top: 36px; width: 560px; border-radius: 10px; padding: 56px 32px; }
+#dzLine, #dzHot { position: absolute; left: 0; top: 0; width: 100%; height: 100%; border-radius: 10px; }
+#dzLine { border: 2px dashed var(--border-ui); }
+#dzHot { border: 2px dashed var(--accent); background: #140d06; opacity: 0; }
+#dropzone > div:not(#dzLine):not(#dzHot) { position: relative; }
+.dz-icon { font-size: 46px; }
+.dz-main { font-size: 19px; font-weight: 900; color: #fff; margin-top: 14px; }
+.dz-sub { font-size: 15px; color: var(--text-2); margin-top: 8px; }
+.total-set { margin-top: 24px; font-size: 16px; color: var(--text-2); display: flex; align-items: center; justify-content: center; gap: 8px; }
+.total-set .inbox { width: 84px; padding: 10px; font-size: 20px; border-radius: 6px; }
+.rec-hint { font-size: 14px; color: var(--dim); }
+
+/* 일괄 입력 모달 */
+#bulk { left: 0; top: 0; width: 1920px; height: 1080px; background: rgba(0,0,0,.72); opacity: 0; }
+#card { position: absolute; left: 530px; top: 65px; width: 860px; height: 950px; overflow: hidden; background: var(--panel); border: 1px solid var(--border-ui); border-radius: 10px; }
+#cardIn { position: absolute; left: 0; top: 0; width: 860px; padding: 28px 30px; }
+#cardIn h2 { font-size: 21px; font-weight: 900; color: var(--text); }
+.bulk-opts { display: flex; gap: 8px; align-items: center; margin-top: 14px; }
+.sel { background: var(--bg); color: var(--text); border: 1px solid var(--border-ui); border-radius: 6px; padding: 10px 12px; font-size: 15px; white-space: nowrap; }
+.sel.ph { color: var(--dim); flex: 1; }
+.ai-box { margin-top: 14px; border: 1px solid #5a3a14; background: #140e07; border-radius: 8px; padding: 18px 20px; }
+.ai-head { display: flex; align-items: center; gap: 10px; }
+.ai-head b { font-size: 17px; color: var(--text); }
+.ai-tag { font-size: 13px; color: var(--accent); border: 1px solid #7a4f1c; border-radius: 4px; padding: 2px 9px; font-weight: 700; }
+.ai-box p { font-size: 14.5px; color: var(--text-2); line-height: 1.6; margin-top: 6px; word-break: keep-all; }
+.ai-box p b { color: var(--text); }
+.ai-grid { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 8px; margin-top: 12px; }
+.ai-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; font-weight: 700; color: var(--text-2); }
+.ai-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+.ai-row .sel { flex: 1; letter-spacing: 0.15em; }
+.ai-chk { font-size: 14.5px; color: var(--text-2); display: inline-flex; align-items: center; gap: 6px; }
+.ai-chk i { width: 15px; height: 15px; border-radius: 3px; background: var(--accent); display: block; }
+.ai-link { color: var(--accent); font-size: 14.5px; font-weight: 700; }
+.ai-msg { position: relative; margin-top: 10px; height: 46px; }
+.ai-msg span { position: absolute; left: 0; top: 0; font-size: 15px; font-weight: 700; color: var(--text-2); line-height: 1.5; word-break: keep-all; opacity: 0; }
+.ai-msg span.ok { color: var(--ok); }
+.or-sep { margin: 22px 0 6px; font-size: 15px; color: var(--text-2); font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.or-sep::before, .or-sep::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.bstep { display: flex; gap: 12px; margin-top: 12px; }
+.bn { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #111; font: 700 14px var(--font); display: flex; align-items: center; justify-content: center; }
+.bt b { font-size: 16px; color: var(--text); font-weight: 700; }
+.bt p { font-size: 14.5px; color: var(--text-2); line-height: 1.6; margin-top: 3px; word-break: keep-all; }
+.bt code { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; color: var(--accent); font-size: 13.5px; }
+#ta { position: relative; width: 100%; height: 200px; margin-top: 16px; background: var(--bg); color: var(--text); border: 1px solid var(--border-ui); border-radius: 6px; padding: 16px; font-size: 15px; line-height: 1.6; overflow: hidden; }
+#taPh { color: var(--dim); white-space: pre-line; }
+#taText { position: absolute; left: 16px; top: 16px; right: 16px; white-space: pre-wrap; word-break: keep-all; }
+.bulk-msg { position: relative; font-size: 15px; color: var(--ok); font-weight: 700; margin-top: 10px; height: 20px; }
+.bulk-msg span { opacity: 0; }
+.bulk-actions { display: flex; gap: 10px; margin-top: 16px; }
+.bulk-actions .grow { flex: 1; }
+
+/* 기기 연결 패널 */
+#remotePanel { left: 1496px; top: 80px; width: 400px; background: var(--panel); border: 1px solid var(--border-ui); border-radius: 8px; padding: 22px; text-align: center; box-shadow: 0 24px 60px rgba(0,0,0,.6); opacity: 0; }
+.rp-title { font-size: 17px; font-weight: 900; color: var(--text); }
+.rp-code { font-size: 15px; color: var(--text-2); margin-top: 12px; }
+.rp-digits { display: flex; justify-content: center; gap: 4px; margin-top: 6px; }
+.rp-digits b { font: 700 56px var(--font); color: var(--accent); width: 50px; }
+.rp-block { margin-top: 16px; }
+.rp-lbl { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.qr { width: 170px; height: 170px; margin: 0 auto; background: #fff; border-radius: 6px; padding: 10px; }
+.rp-deck { border-top: 1px solid var(--border); margin-top: 16px; padding-top: 14px; }
+.rp-sub { font-size: 14px; color: var(--text-2); margin-top: 8px; line-height: 1.55; word-break: keep-all; }
+.rp-sub b { color: var(--text); }
+.rp-url { margin-top: 8px; font: 600 14px var(--font); color: var(--accent); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 9px 10px; }
+.rp-stat { position: relative; height: 22px; font-size: 15px; font-weight: 700; margin-top: 12px; }
+.rp-stat span { position: absolute; left: 0; right: 0; top: 0; }
+#rpOff { color: var(--accent); }
+#rpOn { color: var(--ok); opacity: 0; }
+
+/* 슬라이드 (가상 PT) */
+.slide { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: #F2D338; color: #1d1d1b; padding: 140px 160px; transform-origin: 0 0; }
+.slide .sk { font-size: 34px; font-weight: 800; letter-spacing: 0.08em; }
+.slide .st { font-size: 128px; font-weight: 900; letter-spacing: -0.04em; line-height: 1.12; margin-top: 60px; word-break: keep-all; }
+.slide .ss { font-size: 40px; font-weight: 600; margin-top: 50px; }
+.slide .sn { position: absolute; right: 160px; bottom: 120px; font-size: 32px; font-weight: 800; }
+.slide.s2 { background: #1d1d1b; color: #F2D338; }
+.slide.s12 { background: #fffbe8; }
+#deck1, #deck2 { opacity: 0; }
+
+/* ----- 3. 발표장 ----- */
+#projector { left: 5040px; top: 380px; width: 1600px; height: 900px; background: #0E0E0E; overflow: hidden; border: 2px solid #262626; }
+#deckScale { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform: scale(0.8333333); transform-origin: 0 0; background: #0E0E0E; }
+#gate { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: #0E0E0E; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #fff; }
+#gate h1 { font-size: 30px; font-weight: 900; margin-bottom: 12px; }
+#gate p { font-size: 15px; color: #a9afb8; line-height: 1.7; max-width: 520px; word-break: keep-all; margin-bottom: 30px; }
+#gate p b { color: #fff; }
+.code-in { position: relative; width: 240px; height: 110px; background: #000; border: 2px solid #262626; border-radius: 16px; display: flex; align-items: center; justify-content: center; }
+#codePh { font-size: 64px; font-weight: 900; letter-spacing: 0.3em; color: #868d97; padding-left: 0.3em; }
+.go { margin-top: 24px; background: #F97316; color: #000; border-radius: 12px; padding: 16px 48px; font-size: 18px; font-weight: 900; }
+#gate .hint2 { margin-top: 28px; font-size: 13px; color: #868d97; }
+#deckStatus { position: absolute; left: 16px; bottom: 14px; display: flex; align-items: center; gap: 8px; font-size: 12px; letter-spacing: 0.04em; color: #c9ccd1; background: rgba(0,0,0,.75); border: 1px solid #262626; border-radius: 999px; padding: 7px 14px; opacity: 0; }
+#deckStatus i { width: 9px; height: 9px; border-radius: 50%; background: #0c0; display: block; }
+
+#phone { left: 6800px; top: 470px; width: 400px; height: 820px; background: #050506; border: 3px solid #2f343c; border-radius: 54px; padding: 18px; }
+#phoneScr { position: relative; width: 100%; height: 100%; border-radius: 38px; overflow: hidden; background: var(--bg); }
+.ph-layer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; flex-direction: column; }
+#phWait { align-items: center; justify-content: center; text-align: center; padding: 30px; }
+#phWait .big { font-size: 22px; font-weight: 900; margin-bottom: 14px; }
+#phWait .sub { font-size: 15px; color: #a9afb8; line-height: 1.6; word-break: keep-all; }
+#phScan { background: #000; align-items: center; justify-content: center; opacity: 0; }
+#phScan .frame { width: 230px; height: 230px; border: 3px solid #fff; border-radius: 20px; padding: 18px; }
+#phScan .qr { width: 190px; height: 190px; }
+#phScan .cap { margin-top: 22px; font-size: 16px; font-weight: 700; color: #fff; }
+#phRemote { opacity: 0; }
+.top { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #3a4049; }
+.conn { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #a9afb8; }
+.conn i { width: 9px; height: 9px; border-radius: 50%; background: #3fd27a; display: block; }
+.pageno { position: relative; font-size: 15px; font-weight: 900; }
+.pageno .tot { color: #868d97; font-weight: 700; }
+.info { padding: 20px 22px 8px; }
+.timer { font-size: 34px; font-weight: 900; letter-spacing: -0.02em; }
+.timer .cap { font-size: 14px; color: #a9afb8; font-weight: 700; margin-right: 8px; }
+.pace { margin-top: 8px; font-size: 14px; font-weight: 800; color: #3fd27a; }
+.note { position: relative; margin-top: 14px; font-size: 16px; color: #c3c8cf; line-height: 1.55; word-break: keep-all; height: 128px; overflow: hidden; }
+.note span { position: absolute; left: 0; top: 0; }
+.pad { flex: 1; display: flex; gap: 10px; padding: 14px; }
+.pad > div { flex: 1; border-radius: 18px; font-size: 22px; font-weight: 900; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+.pad .prev { background: #15181d; border: 1px solid #3a4049; color: #fff; }
+.pad .next { background: #F97316; color: #000; }
+.pad .arrow { font-size: 54px; line-height: 1; }
+.pad .cap { font-size: 15px; }
+.foot2 { display: flex; gap: 10px; padding: 0 14px 16px; }
+.foot2 > div { flex: 1; background: #15181d; border: 1px solid #3a4049; color: #fff; border-radius: 14px; padding: 16px 4px; font-size: 13px; font-weight: 700; text-align: center; white-space: nowrap; }
+.foot2 .start { border-color: #F97316; color: #F97316; }
+#pulse { left: 0; top: 0; width: 70px; height: 70px; border-radius: 50%; background: var(--accent); opacity: 0; box-shadow: 0 0 40px rgba(249,115,22,.8); }
+
+/* ----- 4. 돌아보기 시간표 ----- */
+#retro { left: 2450px; top: 2050px; width: 3100px; height: 940px; }
+#retro .rt-h { position: absolute; left: 0; top: 0; font-size: 52px; font-weight: 800; color: var(--text); opacity: 0; }
+#axis { position: absolute; left: 0; top: 150px; width: 2700px; height: 6px; background: var(--border-ui); transform-origin: 0 50%; }
+.tick { position: absolute; top: 172px; font-size: 36px; font-weight: 700; color: var(--dim); opacity: 0; }
+.row { position: absolute; left: 0; height: 150px; width: 3100px; }
+.row .rl { position: absolute; left: 0; top: -62px; font-size: 44px; font-weight: 800; opacity: 0; }
+.seg { position: absolute; top: 0; height: 120px; border-radius: 8px; display: flex; align-items: center; padding-left: 30px; font-size: 44px; font-weight: 800; white-space: nowrap; overflow: hidden; transform-origin: 0 50%; }
+.seg.gray { background: #2a2f37; color: var(--text); }
+.seg.gray2 { background: #3a4049; color: var(--text); }
+.seg.or { background: var(--accent); color: #111; }
+.seg.or2 { background: #c45a12; color: #fff; }
+.tot { position: absolute; top: 16px; font-size: 60px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; opacity: 0; }
+.tot small { font-size: 32px; font-weight: 700; color: var(--text-2); margin-left: 12px; }
+.chips { position: absolute; left: 0; top: 138px; display: flex; gap: 14px; opacity: 0; }
+.chips span { font-size: 36px; font-weight: 700; color: var(--text-2); border: 2px solid var(--border-ui); border-radius: 999px; padding: 6px 22px; }
+.chips.or span { color: var(--accent); border-color: #7a4f1c; }
+#retroNote { position: absolute; left: 0; top: 880px; font-size: 34px; font-weight: 600; color: var(--dim); opacity: 0; white-space: nowrap; }
+
+/* 커서 */
+#cursor { left: 0; top: 0; width: 34px; height: 46px; opacity: 0; }
+
+/* ===== 화면 고정 층: 자막 · 브랜드 ===== */
+#hud { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; pointer-events: none; }
+.sub { position: absolute; left: 0; right: 0; bottom: 70px; display: flex; justify-content: center; opacity: 0; }
+.sub.top { top: 56px; bottom: auto; }
+.sub span { background: rgba(5,6,8,.86); color: #fff; font-size: 46px; font-weight: 700; letter-spacing: -0.01em; padding: 16px 34px; border-radius: 10px; white-space: nowrap; }
+#scrim { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: #0b0d10; opacity: 0; }
+#brand { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+#brandEye { font-size: 30px; letter-spacing: 0.32em; font-weight: 800; color: var(--accent); opacity: 0; padding-left: 0.32em; }
+#brandLine { font-size: 124px; font-weight: 900; letter-spacing: -0.045em; color: #fff; margin-top: 34px; opacity: 0; }
+#brandRule { width: 0px; height: 8px; background: var(--accent); margin-top: 40px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="main" data-start="0" data-width="1920" data-height="1080" data-duration="52">
+
+<div id="world">
+  <!-- 1. 종이 대본 -->
+  <div id="paper" class="abs">
+    <div class="ph"><span>하루 레몬 리뉴얼 경쟁 PT — 발표 대본</span><span>1 / 20</span></div>
+    <div id="paperText">안녕하십니까, 하루 레몬 리뉴얼 제안을 맡은 기획 3팀입니다. 지난 1년 레몬 음료 시장은 <b>12% 커졌지만</b>, 하루 레몬의 점유율은 그대로였습니다. 2030에게 하루 레몬은 아직 ‘엄마가 마시던 음료’이기 때문입니다. 오늘은 그 인식을 바꿀 세 가지 방법을 말씀드리겠습니다. 먼저 2030이 하루 레몬을 어떻게 기억하는지부터 보겠습니다.</div>
+    <div id="marker" class="abs"></div>
+  </div>
+  <div id="watch" class="abs">
+    <div class="wl">발표 경과</div>
+    <div id="watchNum">17:52</div>
+    <div class="wt">목표 18:00</div>
+    <div id="watchRed" class="abs"></div>
+  </div>
+  <div id="chip" class="abs"><div class="ci">PDF</div><div><div class="cn">하루레몬_리뉴얼_경쟁PT.pdf</div><div class="cs">20쪽 · 슬라이드</div></div></div>
+
+  <!-- 2. 노트북: 프롬프터 앱 -->
+  <div id="bezel" class="abs"></div>
+  <div id="app" class="abs">
+    <header>
+      <div class="time-box">
+        <div>현재<b>14:00:27</b></div>
+        <div>경과<b id="hdElapsed">00:00:00</b></div>
+        <div class="status-tag" id="statusTag">STANDBY<span id="liveTag" class="swap">LIVE — 연단 연동</span></div>
+        <div class="status-tag">화면 1</div>
+      </div>
+      <div class="head-right">
+        <span class="btn q" id="prepBtn">준비 ▾</span>
+        <span class="head-sep"></span>
+        <span class="btn" id="micBtn">🎙 음성 추적<kbd>M</kbd><span id="micOn" class="swap"><i></i>음성 추적 중</span></span>
+        <span class="btn">가림<kbd>Esc</kbd></span>
+        <span class="btn primary">프로젝터에 슬라이드 띄우기</span>
+      </div>
+    </header>
+
+    <div id="sidebar" class="abs">
+      <div class="sb-pn">
+        <div class="thumb" id="thumb"></div>
+        <div class="slide-meta">
+          <div class="slide-num"><span id="sNum">01</span><span class="total"> / 20</span></div>
+          <div class="slide-file">하루레몬_리뉴얼_경쟁PT.pdf</div>
+        </div>
+      </div>
+      <div class="sb-pn">
+        <div class="pn-h">남은 시간 <span class="target-set">총 <span class="inbox">18</span> 분</span></div>
+        <div class="bt-remain" id="remain">18:00</div>
+        <div class="bt-cells">
+          <div>이 장표<b><span id="pgEl">0</span><small>초</small></b></div>
+          <div>총 경과<b id="totEl">00:00</b></div>
+        </div>
+      </div>
+      <div class="sb-pn" id="paceCard">
+        <div class="pc-head"><span class="pc-cap">이 장표</span><span class="pc-alloc">배정 <span class="inbox">50</span> 초</span></div>
+        <div class="pc-row"><span class="pc-lbl">읽음</span><div class="pc-bar read"><i id="readFill"></i></div><b class="pc-val" id="readPct">–</b></div>
+        <div class="pc-row"><span class="pc-lbl">시간</span><div class="pc-bar time"><i id="timeFill"></i></div><b class="pc-val" id="timePct">0%</b></div>
+        <div class="st-wrap"><div class="pc-status dim" id="paceDim">발표를 시작하면 페이스를 계산합니다</div><div class="pc-status ok" id="paceOk" style="opacity:0">● 적정 페이스</div><div class="pc-status dim" id="paceMeas" style="opacity:0">● 페이스 측정 중…</div></div>
+        <div class="sub-wrap"><div class="pc-sub" id="paceSub0">남은 대본 약 0:52 / 배정 0:50</div><div class="pc-sub" id="paceSub1" style="opacity:0">이 속도면 0:47 걸림 / 배정 0:50</div><div class="pc-sub" id="paceSub2" style="opacity:0">이 속도면 0:48 걸림 / 배정 0:50</div></div>
+      </div>
+      <div class="sb-pn" id="schedCard">
+        <div class="pc-head"><span class="pc-cap">전체 일정</span><span class="pc-link">⏱ 시간 배분표</span></div>
+        <div class="pc-row"><span class="pc-lbl">대본</span><div class="pc-bar read"><i id="allReadFill"></i></div><b class="pc-val" id="allReadPct">0%</b></div>
+        <div class="pc-row"><span class="pc-lbl">시간</span><div class="pc-bar time" id="allTimeBar"><i id="allTimeFill"></i></div><b class="pc-val" id="allTimePct">0%</b></div>
+        <div class="st-wrap"><div class="pc-status dim" id="schedDim">발표 시작 전</div><div class="pc-status ok" id="schedOk" style="opacity:0">● 일정대로 진행 중</div></div>
+        <div class="sub-wrap"><div class="pc-sub" id="schedSub0">배정 합계 18:00 / 목표 18:00</div><div class="pc-sub" id="schedSubA" style="opacity:0">예상 종료 17:58 / 목표 18:00</div><div class="pc-sub" id="schedSubB" style="opacity:0">예상 종료 17:48 / 목표 18:00</div></div>
+      </div>
+    </div>
+
+    <div id="scriptArea" class="abs">
+      <div id="scriptEmpty">이 페이지에 저장된 대본이 없습니다. 준비 메뉴의 ‘대본 편집’(E)으로 입력하거나, ‘대본 일괄 입력’으로 한 번에 붙여넣으세요.</div>
+      <div id="script1" class="script-content">안녕하십니까, 하루 레몬 리뉴얼 제안을 맡은 기획 3팀입니다. 지난 1년 레몬 음료 시장은 <b>12% 커졌지만</b>, 하루 레몬의 점유율은 그대로였습니다. 2030에게 하루 레몬은 아직 ‘엄마가 마시던 음료’이기 때문입니다. 오늘은 그 인식을 바꿀 세 가지 방법을 말씀드리겠습니다.</div>
+      <div id="script2" class="script-content">먼저 2030이 하루 레몬을 어떻게 기억하는지부터 보겠습니다. 저희가 만난 스물네 명 가운데 열여섯 명이 같은 단어를 꺼냈습니다.</div>
+      <div id="script12" class="script-content">실행은 세 단계로 나눕니다. 첫 달에는 이름은 그대로 두고 병 모양만 바꿉니다.</div>
+      <div id="voiceBar" class="abs">
+        <span class="vb-dot"></span><span class="vb-state">듣는 중</span><span class="vb-lang">한국어</span><span class="vb-mode">자동 (한/영)</span>
+        <span class="vb-heard"><span>“안녕하십니까 하루 레몬”</span><span>“레몬 음료 시장은 12%”</span><span>“점유율은 그대로였습니다”</span><span>“2030에게 하루 레몬은”</span></span>
+      </div>
+      <div id="cover" class="abs">
+        <div class="cv-eyebrow">STANDBY</div>
+        <div class="cv-title">PDF 텔레프롬프터</div>
+        <div class="cv-clock">14:00:00</div>
+        <div class="cv-btn" id="cvBtn">▶ 발표 시작</div>
+        <div class="cv-hint">클릭 · Space · Enter 로 시작 — 프로젝터 슬라이드도 함께 켜집니다 &nbsp;|&nbsp; 발표 중 Esc 로 다시 가림</div>
+      </div>
+    </div>
+
+    <div id="foot" class="abs">
+      <div class="hint">발표 창과 연결된 기기가 함께 넘어갑니다</div>
+      <div class="nav-guide">
+        <span class="nav-btn">가−</span><span class="fs-label">42px</span><span class="nav-btn">가+</span>
+        <span class="nav-sep"></span>
+        <span class="nav-btn big">◀ 이전</span><span class="nav-btn big">다음 ▶</span>
+      </div>
+    </div>
+
+    <div id="prepMenu" class="abs">
+      <div class="mi">PDF 교체</div>
+      <div class="mi" id="miBulk">대본 일괄 입력 · AI 생성</div>
+      <div class="mi" id="miRemote">기기 연결 (QR · 3자리)</div>
+      <hr>
+      <div class="mi">대본 편집<kbd>E</kbd></div>
+      <div class="mi">이 페이지에 영상 첨부</div>
+      <hr>
+      <div class="mi">대본 내보내기 (파일 저장)</div>
+      <div class="mi">대본 가져오기</div>
+    </div>
+
+    <div id="remotePanel" class="abs">
+      <div class="rp-title">🔗 기기 연결</div>
+      <div class="rp-code">슬라이드 연결 코드 (deck.html 에 입력)<div class="rp-digits"><b id="d1">4</b><b id="d2">8</b><b id="d3">2</b></div></div>
+      <div class="rp-block"><div class="rp-lbl">📱 폰 리모컨 — QR 스캔 (입력 불필요)</div><div class="qr"><canvas class="qrc" width="150" height="150"></canvas></div></div>
+      <div class="rp-block rp-deck">
+        <div class="rp-lbl">🖥 연단(발표장) 슬라이드 — 다른 PC에서</div>
+        <div class="rp-sub">발표장 PC 브라우저에 아래 주소를 열고, 위 <b>3자리 코드</b>를 입력하세요.</div>
+        <div class="rp-url">…/prompter/deck.html</div>
+        <div class="rp-sub">내 기기가 슬라이드를 직접 전송하므로 <b>발표장 PC엔 PDF·설치 불필요</b>.</div>
+      </div>
+      <div class="rp-stat"><span id="rpOff">기기 연결 대기 중</span><span id="rpOn">연결됨 ✓&nbsp; 📱 1 · 🖥 1</span></div>
+    </div>
+
+    <div id="bulk" class="abs">
+      <div id="card">
+        <div id="cardIn">
+          <h2>대본 일괄 입력 — AI로 한 번에 작성하기</h2>
+          <div class="bulk-opts"><span class="sel">한국어 대본 ▾</span><span class="sel ph">추가 요청 (선택) — 예: 청중은 임원진, 비용 절감 효과를 강조, 너무 딱딱하지 않게</span></div>
+          <div class="ai-box" id="aiBox">
+            <div class="ai-head"><b>🤖 방법 A — AI가 슬라이드를 직접 읽고 대본 작성</b><span class="ai-tag">Claude · ChatGPT · Gemini</span></div>
+            <p>PDF 각 페이지의 <b>그림과 글자</b>를 AI에게 보여 주고, 총 발표 시간에 맞춘 <b>페이지별 대본과 배정 시간</b>을 받아 아래 칸에 채웁니다. 확인 후 ‘대본 적용’을 누르세요.</p>
+            <div class="ai-grid">
+              <label>AI<span class="sel">Claude (Anthropic) ▾</span></label>
+              <label>모델<span class="sel">Claude Opus 5.5 — 기본 · 꼼꼼함 ▾</span></label>
+              <label>생각 깊이<span class="sel">보통 ▾</span></label>
+            </div>
+            <div class="ai-row"><span class="sel">●●●●●●●●●●●●●●●●</span><span class="ai-chk"><i></i> 이 브라우저에 기억</span><span class="ai-link">키 발급 ↗</span></div>
+            <div class="ai-row"><span class="btn primary" id="aiGo">🤖 슬라이드 읽고 대본 생성</span><span class="btn" id="aiStop" style="opacity:.45">중지</span></div>
+            <div class="ai-msg" id="aiMsg">
+              <span id="m1">① 슬라이드 읽는 중… <em id="m1n">1</em>/20</span>
+              <span id="m2">② 대본 작성 중 — Claude Opus 5.5 · <em id="m2n">0</em>자</span>
+              <span id="m3" class="ok">✓ 완료 — 20/20쪽 대본과 배정 시간이 생성됐습니다 (Claude Opus 5.5 · 보통). 내용을 확인하고 ‘대본 적용’을 누르세요.</span>
+            </div>
+          </div>
+          <div class="or-sep">방법 B — 쓰던 AI 채팅(ChatGPT·Claude 등)에 직접 붙여넣기</div>
+          <div class="bstep"><span class="bn">1</span><div class="bt"><b>LLM 프롬프트를 복사한다</b><p>아래 버튼을 누르면 “페이지별 대본을 <code>=== 1 ===</code> 형식으로 써 달라”는 프롬프트가 복사됩니다.</p></div></div>
+          <div class="bstep"><span class="bn">2</span><div class="bt"><b>LLM에 붙여넣고 원본 슬라이드를 함께 첨부한다</b><p>ChatGPT·Claude 등에 프롬프트를 붙여넣고, <b>발표 원본(PDF 또는 페이지 이미지)을 같이 첨부</b>하세요.</p></div></div>
+          <div class="bstep"><span class="bn">3</span><div class="bt"><b>받은 결과를 아래 칸에 붙여넣는다</b><p>LLM 출력 전체를 그대로 붙여넣으면 됩니다.</p></div></div>
+          <div class="bstep"><span class="bn">4</span><div class="bt"><b>‘대본 적용’을 누른다</b><p>페이지별로 자동 편성·저장됩니다.</p></div></div>
+          <div id="ta"><div id="taPh">여기에 LLM이 만든 대본을 붙여넣으세요.
+
+=== 1 ===
+첫 페이지 대본...</div><div id="taText"></div></div>
+          <div class="bulk-msg"><span id="bmsg">20개 페이지 대본을 적용했습니다.</span></div>
+          <div class="bulk-actions"><span class="btn">📋 프롬프트 다시 복사</span><span class="grow"></span><span class="btn">취소</span><span class="btn primary" id="applyBtn">대본 적용</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 시작 화면 -->
+    <div id="start" class="abs">
+      <div class="s-eyebrow">PDF TELEPROMPTER</div>
+      <h1>프롬프터용 PDF를 불러오세요</h1>
+      <p>발표 슬라이드 PDF를 선택하면 각 페이지를 이미지로 변환해 페이지별로 편성합니다. 대본은 비어 있는 상태에서 시작합니다.</p>
+      <div id="dropzone">
+        <div id="dzLine"></div><div id="dzHot"></div>
+        <div class="dz-icon">📄</div>
+        <div class="dz-main">여기에 PDF를 끌어다 놓거나 클릭해 선택</div>
+        <div class="dz-sub">불러온 PDF는 이 브라우저에 저장되어 다음에 다시 열립니다</div>
+      </div>
+      <div class="total-set">⏱ 총 발표 시간 <span class="inbox">18</span> 분 <span class="rec-hint">(언제든 변경 가능)</span></div>
+    </div>
+  </div>
+
+  <!-- 3. 발표장 -->
+  <div id="projector" class="abs">
+    <div id="deckScale">
+      <div class="slide s1" id="deck1"><div class="sk">2026 경쟁 PT · 기획 3팀</div><div class="st">하루 레몬<br>리뉴얼 제안</div><div class="ss">2030의 첫 레몬 음료가 되는 법</div><div class="sn">01</div></div>
+      <div class="slide s2" id="deck2"><div class="sk">2030에게 하루 레몬은</div><div class="st">‘엄마가 마시던<br>음료’</div><div class="ss">24명 중 16명이 꺼낸 같은 말</div><div class="sn">02</div></div>
+      <div id="gate">
+        <h1>연단 슬라이드 연결</h1>
+        <p>노트북 프롬프터의 <b>🔗 기기 연결</b> 패널에 표시된 <b>3자리 코드</b>를 입력하세요.</p>
+        <div class="code-in" id="codeIn"><span id="codePh">000</span></div>
+        <div class="go" id="goBtn">연결</div>
+        <div class="hint2">슬라이드 이미지는 프롬프터가 직접 전송합니다 (이 기기에 PDF 불필요)</div>
+      </div>
+      <div id="deckStatus"><i></i><span>연결됨 ✓ — 프롬프터를 따라갑니다</span></div>
+    </div>
+  </div>
+  <div id="phone" class="abs">
+    <div id="phoneScr">
+      <div class="ph-layer" id="phWait"><div class="big">노트북에 연결 중…</div><div class="sub">프롬프터 화면에서 🔗 기기 연결 버튼을 켜고 QR이 떠 있는지 확인하세요.</div></div>
+      <div class="ph-layer" id="phScan"><div class="frame"><div class="qr"><canvas class="qrc" width="154" height="154"></canvas></div></div><div class="cap">QR 스캔</div></div>
+      <div class="ph-layer" id="phRemote">
+        <div class="top"><div class="conn"><i></i>연결됨</div><div class="pageno"><span id="phNum">01</span><span class="tot"> / 20</span></div></div>
+        <div class="info">
+          <div class="timer"><span class="cap">남은 시간</span><span id="phRemain">18:00</span></div>
+          <div class="pace" id="phPace" style="opacity:0">🎙 읽음 57% · ● 적정 페이스</div>
+          <div class="note"><span id="phNote1">안녕하십니까, 하루 레몬 리뉴얼 제안을 맡은 기획 3팀입니다. 지난 1년 레몬 음료 시장은 <b>12% 커졌지만</b>…</span><span id="phNote2" style="opacity:0">먼저 2030이 하루 레몬을 어떻게 기억하는지부터 보겠습니다.</span></div>
+        </div>
+        <div class="pad"><div class="prev"><span class="arrow">◀</span><span class="cap">이전</span></div><div class="next" id="phNext"><span class="arrow">▶</span><span class="cap">다음</span></div></div>
+        <div class="foot2"><div class="start">▶ 시작 / 가림</div><div>🎬 영상</div><div>⤒ 처음으로</div></div>
+      </div>
+    </div>
+  </div>
+  <div id="pulse" class="abs"></div>
+
+  <!-- 4. 돌아보기 -->
+  <div id="retro" class="abs">
+    <div class="rt-h" id="rtH">발표 한 건 준비에 드는 시간</div>
+    <div id="axis"></div>
+    <div class="tick" style="left:0">0</div>
+    <div class="tick" style="left:600px">1시간</div>
+    <div class="tick" style="left:1200px">2시간</div>
+    <div class="tick" style="left:1800px">3시간</div>
+    <div class="tick" style="left:2400px">4시간</div>
+    <div class="row" id="rowA" style="top:330px">
+      <div class="rl" style="color:var(--text-2)">예전 · 7단계</div>
+      <div class="seg gray" id="a1" style="left:0;width:1800px">대본 작성 3시간</div>
+      <div class="seg gray2" id="a2" style="left:1806px;width:894px">배분·리허설 1시간 30분</div>
+      <div class="tot" id="aT" style="left:2740px;color:var(--text)">4시간 30분</div>
+      <div class="chips" id="aC"><span>USB로 파일 옮기기</span><span>종이 대본</span><span>넘김·시간 신호 보조 1명</span></div>
+    </div>
+    <div class="row" id="rowB" style="top:640px">
+      <div class="rl" style="color:var(--accent)">지금 · 4단계</div>
+      <div class="seg or" id="b1" style="left:0;width:1260px">AI 초안 + 검토 2시간 6분</div>
+      <div class="seg or2" id="b2" style="left:1266px;width:714px">배분·리허설 1시간 12분</div>
+      <div class="tot" id="bT" style="left:2020px;color:var(--accent)">3시간 18분</div>
+      <div class="chips or" id="bC"><span>PDF 하나</span><span>숫자 세 개</span><span>폰 리모컨</span></div>
+    </div>
+    <div id="retroNote">20분 발표 1건 기준 · 실측 전 추정 (효과 산식: 대본 30% · 배분·리허설 20% 단축)</div>
+  </div>
+
+  <svg id="cursor" class="abs" viewBox="0 0 34 46"><path d="M2 2 L2 38 L11 29 L17 43 L23 40 L17 27 L30 27 Z" fill="#fff" stroke="#111" stroke-width="2.5" stroke-linejoin="round"/></svg>
+</div>
+
+<div id="hud">
+  <div class="sub" id="sub1"><span>어… 어디까지 읽었더라.</span></div>
+  <div class="sub" id="sub2"><span>벌써 2분이나 넘었네.</span></div>
+  <div class="sub" id="sub3"><span>이번엔 프롬프터에 PDF만 넣어 보자.</span></div>
+  <div class="sub" id="sub4"><span>스무 장 대본은 AI한테 먼저 맡기고.</span></div>
+  <div class="sub" id="sub5"><span>난 읽어 보고 고치기만 하면 되네.</span></div>
+  <div class="sub" id="sub6"><span>USB 안 꽂아도 숫자 세 개면 되네.</span></div>
+  <div class="sub" id="sub7"><span>폰은 QR 한 번 찍으면 끝이고.</span></div>
+  <div class="sub" id="sub8"><span>읽는 데까지 알아서 따라오네.</span></div>
+  <div class="sub" id="sub9"><span>빠른지 느린지도 바로 보이고.</span></div>
+  <div class="sub" id="sub10"><span>넘기는 건 폰으로 하면 되고.</span></div>
+  <div class="sub" id="sub11"><span>이대로면 12초 남기고 끝나겠네.</span></div>
+  <div id="scrim"></div>
+  <div id="brand"><div id="brandEye">PDF TELEPROMPTER</div><div id="brandLine">당신만의 AI 프롬프터</div><div id="brandRule"></div></div>
+</div>
+
+<audio id="bgm" data-start="0" data-duration="52" data-track-index="10" data-volume="0.35" src="assets/music/bgm-vol10-119bpm.mp3"></audio>
+<audio id="fx01" data-start="3.0" data-duration="0.14" data-track-index="11" data-volume="0.5" src="assets/sfx/impactSoft_medium_003.ogg"></audio>
+<audio id="fx02" data-start="7.55" data-duration="0.18" data-track-index="12" data-volume="0.6" src="assets/sfx/impactSoft_medium_001.ogg"></audio>
+<audio id="fx03" data-start="8.8" data-duration="0.01" data-track-index="11" data-volume="0.55" src="assets/sfx/click_003.ogg"></audio>
+<audio id="fx04" data-start="9.2" data-duration="0.01" data-track-index="12" data-volume="0.55" src="assets/sfx/click_003.ogg"></audio>
+<audio id="fx05" data-start="10.3" data-duration="0.01" data-track-index="11" data-volume="0.6" src="assets/sfx/click_003.ogg"></audio>
+<audio id="fx06" data-start="12.6" data-duration="0.25" data-track-index="12" data-volume="0.3" src="assets/sfx/keypress-003.wav"></audio>
+<audio id="fx07" data-start="13.1" data-duration="0.25" data-track-index="11" data-volume="0.3" src="assets/sfx/keypress-012.wav"></audio>
+<audio id="fx08" data-start="13.7" data-duration="0.25" data-track-index="12" data-volume="0.3" src="assets/sfx/keypress-024.wav"></audio>
+<audio id="fx09" data-start="14.2" data-duration="0.25" data-track-index="11" data-volume="0.3" src="assets/sfx/keypress-007.wav"></audio>
+<audio id="fx10" data-start="14.8" data-duration="0.25" data-track-index="12" data-volume="0.3" src="assets/sfx/keypress-018.wav"></audio>
+<audio id="fx11" data-start="15.4" data-duration="0.12" data-track-index="11" data-volume="0.6" src="assets/sfx/bong_001.ogg"></audio>
+<audio id="fx12" data-start="18.0" data-duration="0.01" data-track-index="12" data-volume="0.55" src="assets/sfx/click_003.ogg"></audio>
+<audio id="fx13" data-start="18.4" data-duration="0.6" data-track-index="11" data-volume="0.4" src="assets/sfx/card-slide-1.ogg"></audio>
+<audio id="fx14" data-start="19.3" data-duration="0.01" data-track-index="12" data-volume="0.55" src="assets/sfx/click_003.ogg"></audio>
+<audio id="fx15" data-start="19.6" data-duration="0.01" data-track-index="11" data-volume="0.55" src="assets/sfx/click_003.ogg"></audio>
+<audio id="fx16" data-start="22.45" data-duration="0.19" data-track-index="12" data-volume="0.6" src="assets/sfx/drop_002.ogg"></audio>
+<audio id="fx17" data-start="22.9" data-duration="0.01" data-track-index="11" data-volume="0.55" src="assets/sfx/click_003.ogg"></audio>
+<audio id="fx18" data-start="23.15" data-duration="0.61" data-track-index="12" data-volume="0.5" src="assets/sfx/switch_002.ogg"></audio>
+<audio id="fx19" data-start="25.1" data-duration="0.11" data-track-index="11" data-volume="0.5" src="assets/sfx/drop_001.ogg"></audio>
+<audio id="fx20" data-start="27.7" data-duration="0.01" data-track-index="12" data-volume="0.55" src="assets/sfx/click_003.ogg"></audio>
+<audio id="fx21" data-start="28.2" data-duration="0.61" data-track-index="11" data-volume="0.5" src="assets/sfx/switch_007.ogg"></audio>
+<audio id="fx22" data-start="36.9" data-duration="0.06" data-track-index="12" data-volume="0.55" src="assets/sfx/click2.ogg"></audio>
+<audio id="fx23" data-start="37.45" data-duration="0.6" data-track-index="11" data-volume="0.45" src="assets/sfx/card-slide-1.ogg"></audio>
+<audio id="fx24" data-start="40.4" data-duration="0.06" data-track-index="12" data-volume="0.4" src="assets/sfx/rollover2.ogg"></audio>
+<audio id="fx25" data-start="43.85" data-duration="0.14" data-track-index="11" data-volume="0.55" src="assets/sfx/impactSoft_medium_002.ogg"></audio>
+<audio id="fx26" data-start="46.7" data-duration="1.48" data-track-index="12" data-volume="0.6" src="assets/sfx/impactBell_heavy_000.ogg"></audio>
+</div>
+
+<script>
+document.fonts.ready.then(() => {
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => Array.from(document.querySelectorAll(s));
+  const world = $('#world');
+  // 일부러 겹치는 층(모달·메뉴·패널·자막·칩·브랜드)은 겹침 검사에서 의도로 표시
+  $$('#bulk *, #prepMenu *, #remotePanel *, .sub span, #chip *, #brand *, #micOn, #liveTag').forEach((el) => el.setAttribute('data-layout-allow-overlap', ''));
+  $$('#bulk, #card, #prepMenu, #remotePanel, .sub span, #scrim, #micOn, #liveTag, #chip').forEach((el) => el.setAttribute('data-layout-allow-occlusion', ''));
+
+  // ---- 가짜 QR (고정 시드) ----
+  let seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const grid = []; for (let i = 0; i < 25 * 25; i++) grid.push(rnd() > 0.5);
+  $$('.qrc').forEach((c) => {
+    const g = c.getContext('2d'), n = 25, u = c.width / n;
+    g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.fillStyle = '#111';
+    const finder = (x, y) => { g.fillRect(x*u, y*u, 7*u, 7*u); g.fillStyle = '#fff'; g.fillRect((x+1)*u, (y+1)*u, 5*u, 5*u); g.fillStyle = '#111'; g.fillRect((x+2)*u, (y+2)*u, 3*u, 3*u); };
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      const inF = (x < 8 && y < 8) || (x > 16 && y < 8) || (x < 8 && y > 16);
+      if (!inF && grid[y*n+x]) g.fillRect(x*u, y*u, u, u);
+    }
+    finder(0, 0); finder(18, 0); finder(0, 18);
+  });
+
+  // ---- 사이드바 썸네일: 슬라이드 축소본 ----
+  const mkThumb = (src, id) => { const c = $(src).cloneNode(true); c.id = id; c.style.transform = 'scale(0.15)'; c.style.left = '32px'; c.style.top = '0px'; c.style.opacity = '0'; $('#thumb').appendChild(c); return c; };
+  const th1 = mkThumb('#deck1', 'th1'), th2 = mkThumb('#deck2', 'th2');
+  const th12 = (() => { const c = $('#deck1').cloneNode(true); c.id = 'th12'; c.className = 'slide s12'; c.innerHTML = '<div class="sk">실행 계획</div><div class="st">세 단계로<br>바꿉니다</div><div class="sn">12</div>'; c.style.transform = 'scale(0.15)'; c.style.left = '32px'; c.style.opacity = '0'; $('#thumb').appendChild(c); return c; })();
+
+  // ---- 대본 단어 쪼개기 (음성 추적 하이라이트용) ----
+  const wrapWords = (el) => {
+    const walk = (node) => {
+      Array.from(node.childNodes).forEach((ch) => {
+        if (ch.nodeType === 3) {
+          const frag = document.createDocumentFragment();
+          ch.textContent.split(/(\s+)/).forEach((p) => {
+            if (!p) return;
+            if (/^\s+$/.test(p)) frag.appendChild(document.createTextNode(p));
+            else { const s = document.createElement('span'); s.className = 'w'; s.textContent = p; frag.appendChild(s); }
+          });
+          ch.replaceWith(frag);
+        } else walk(ch);
+      });
+    };
+    walk(el);
+    return Array.from(el.querySelectorAll('.w'));
+  };
+  const words = wrapWords($('#script1'));
+
+  // ---- 좌표 (작업대 기준, 변형 전) ----
+  const W0 = world.getBoundingClientRect();
+  const R = (el) => { const r = (typeof el === 'string' ? $(el) : el).getBoundingClientRect(); return { x: r.left - W0.left, y: r.top - W0.top, w: r.width, h: r.height, cx: r.left - W0.left + r.width / 2, cy: r.top - W0.top + r.height / 2 }; };
+  const lines = (() => { const t = R('#paperText'); return [0,1,2,3,4,5,6].map((i) => t.y + i * 76 - R('#paper').y); })();
+
+  const tl = gsap.timeline({ paused: true });
+  const cam = (t, cx, cy, s, d = 0.9, ease = 'power3.inOut') => tl.to(world, { x: 960 - cx * s, y: 540 - cy * s, scale: s, duration: d, ease }, t);
+  const camSet = (cx, cy, s) => tl.set(world, { x: 960 - cx * s, y: 540 - cy * s, scale: s }, 0);
+  const show = (sel, t, d = 0.3) => tl.to(sel, { opacity: 1, duration: d, ease: 'power2.out' }, t);
+  const hide = (sel, t, d = 0.3) => tl.to(sel, { opacity: 0, duration: d, ease: 'power2.in' }, t);
+  const sub = (n, a, b) => { tl.fromTo('#sub' + n, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' }, a); tl.to('#sub' + n, { opacity: 0, duration: 0.25, ease: 'power2.in' }, b - 0.25); };
+  const count = (el, a, b, t, d, fmt) => { const o = { v: a }; tl.to(o, { v: b, duration: d, ease: 'none', onUpdate: () => { $(el).textContent = fmt(o.v); } }, t); };
+  const mmss = (s) => { s = Math.max(0, Math.round(s)); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+  const cursorTo = (el, t, d = 0.45) => { const r = R(el); tl.to('#cursor', { x: r.cx - 6, y: r.cy - 4, duration: d, ease: 'power2.inOut' }, t); };
+  const click = (el, t) => { tl.to(el, { scale: 0.94, duration: 0.08, yoyo: true, repeat: 1, ease: 'power1.inOut' }, t); };
+
+  // ===== 0.0–6.0 페인포인트: 종이 대본 =====
+  const P = R('#paper');
+  tl.set('#paper', { rotation: -2 }, 0);
+  tl.set('#marker', { y: lines[0] + 6 }, 0);
+  camSet(P.cx - 40, P.y + 430, 1.3);
+  tl.to('#marker', { y: lines[1] + 6, duration: 0.5, ease: 'power2.inOut' }, 0.6);
+  tl.to('#marker', { y: lines[2] + 6, duration: 0.5, ease: 'power2.inOut' }, 1.3);
+  // 줄을 놓침: 표시가 엉뚱한 줄로 튀며 흔들린다
+  tl.to('#marker', { keyframes: [ { y: lines[5] + 6, duration: 0.18 }, { y: lines[1] + 6, duration: 0.18 }, { y: lines[4] + 6, duration: 0.18 }, { y: lines[3] + 6, duration: 0.22 } ], ease: 'none' }, 2.0);
+  tl.to('#marker', { opacity: 0.35, duration: 0.3 }, 2.8);
+  sub(1, 0.7, 3.2);
+  cam(3.0, 1330, 1030, 0.8, 0.8);
+  count('#watchNum', 17 * 60 + 52, 20 * 60 + 14, 3.2, 1.0, mmss);
+  tl.to('#watchNum', { color: '#ff5a4f', duration: 0.2 }, 3.25);
+  show('#watchRed', 3.25, 0.2);
+  sub(2, 3.5, 5.8);
+
+  // ===== 6.0–9.4 종이가 PDF로 접혀 노트북으로 =====
+  const A = R('#app');
+  const dz = R('#dropzone');
+  tl.set('#chip', { x: P.cx - 260, y: P.cy - 60, scale: 1.4 }, 0);
+  tl.to('#paper', { scale: 0.22, rotation: 6, opacity: 0, duration: 0.6, ease: 'power3.in', transformOrigin: '50% 50%' }, 6.0);
+  hide('#watch', 6.0, 0.4);
+  tl.to('#chip', { opacity: 1, scale: 1, duration: 0.4, ease: 'power2.out' }, 6.35);
+  tl.to('#chip', { x: dz.cx - 260, y: dz.cy - 60, duration: 1.15, ease: 'power3.inOut' }, 6.55);
+  cam(6.3, A.cx, A.cy + 40, 1.4, 1.3);
+  cam(8.45, A.x + 1400, A.y + 260, 1.25, 0.45);
+  sub(3, 6.6, 9.0);
+  show('#dzHot', 7.3, 0.2);
+  tl.to('#chip', { scale: 0.6, opacity: 0, duration: 0.25, ease: 'power2.in' }, 7.7);
+  hide('#start', 8.55, 0.3);
+  // 준비 메뉴 → 대본 일괄 입력
+  tl.set('#cursor', { x: A.x + 1500, y: A.y + 600 }, 0);
+  show('#cursor', 8.4, 0.2);
+  cursorTo('#prepBtn', 8.4, 0.4);
+  click('#prepBtn', 8.8);
+  show('#prepMenu', 8.85, 0.15);
+  cursorTo('#miBulk', 8.95, 0.25);
+  tl.to('#miBulk', { backgroundColor: '#1c2027', duration: 0.1 }, 9.1);
+  hide('#prepMenu', 9.3, 0.15);
+  hide('#cursor', 9.3, 0.15);
+
+  // ===== 9.4–18.8 AI 대본 =====
+  show('#bulk', 9.4, 0.3);
+  tl.fromTo('#card', { y: 20 }, { y: 0, duration: 0.35, ease: 'power2.out' }, 9.4);
+  const aiBox = R('#aiBox');
+  cam(9.45, aiBox.cx, aiBox.cy + 30, 1.5, 0.75);
+  sub(4, 9.9, 12.4);
+  cursorTo('#aiGo', 9.9, 0.4);
+  show('#cursor', 9.9, 0.15);
+  click('#aiGo', 10.3);
+  tl.to('#aiGo', { opacity: 0.45, duration: 0.1 }, 10.4);
+  tl.to('#aiStop', { opacity: 1, duration: 0.1 }, 10.4);
+  hide('#cursor', 10.6, 0.2);
+  show('#m1', 10.4, 0.15);
+  count('#m1n', 1, 20, 10.45, 1.4, (v) => String(Math.round(v)));
+  hide('#m1', 11.9, 0.1);
+  show('#m2', 11.95, 0.1);
+  // 스크롤 내려 대본 칸 보기
+  const SCROLL = 330;
+  tl.to('#cardIn', { y: -SCROLL, duration: 0.6, ease: 'power2.inOut' }, 12.0);
+  const ta = R('#ta');
+  cam(12.0, ta.cx, ta.cy - SCROLL - 40, 1.45, 0.7);
+  hide('#taPh', 12.3, 0.1);
+  const FULL = '=== 1 (50s) ===\n안녕하십니까, 하루 레몬 리뉴얼 제안을 맡은 기획 3팀입니다. 지난 1년 레몬 음료 시장은 **12% 커졌지만**, 하루 레몬의 점유율은 그대로였습니다…\n\n=== 2 (45s) ===\n먼저 2030이 하루 레몬을 어떻게 기억하는지부터 보겠습니다…\n\n=== 3 (60s) ===\n24명 중 16명이 같은 단어를 꺼냈습니다…';
+  const o = { n: 0 };
+  tl.to(o, { n: FULL.length, duration: 2.9, ease: 'none', onUpdate: () => { $('#taText').textContent = FULL.slice(0, Math.round(o.n)); } }, 12.4);
+  count('#m2n', 0, 2936, 12.4, 2.9, (v) => Math.round(v).toLocaleString('en-US'));
+  sub(5, 12.9, 15.4);
+  // 위로: 완료 메시지
+  const am = R('#aiMsg');
+  cam(15.3, am.cx, am.cy - SCROLL + 200, 1.5, 0.55);
+  hide('#m2', 15.35, 0.1);
+  show('#m3', 15.4, 0.15);
+  // 아래로: 대본 적용
+  const ap = R('#applyBtn');
+  cam(17.3, ap.cx - 260, ap.cy - SCROLL - 60, 1.5, 0.5);
+  tl.set('#cursor', { x: ap.cx - 200, y: ap.cy - SCROLL + 120 }, 17.3);
+  show('#cursor', 17.45, 0.15);
+  tl.to('#cursor', { x: ap.cx - 6, y: ap.cy - SCROLL - 4, duration: 0.4, ease: 'power2.inOut' }, 17.5);
+  click('#applyBtn', 18.0);
+  show('#bmsg', 18.05, 0.15);
+  hide('#cursor', 18.3, 0.15);
+  // 대본이 무대로 건너간다
+  hide('#bulk', 18.45, 0.3);
+  hide('#scriptEmpty', 18.45, 0.2);
+  const s1 = R('#script1');
+  tl.fromTo('#script1', { opacity: 0, y: 120, scale: 0.92, transformOrigin: '0 0' }, { opacity: 1, y: 0, scale: 1, duration: 0.6, ease: 'power3.out' }, 18.55);
+  show('#th1', 18.6, 0.3);
+  cam(18.4, A.cx, A.cy, 0.95, 0.7);
+
+  // ===== 19.2–26.6 연결 =====
+  tl.set('#cursor', { x: A.x + 1100, y: A.y + 400 }, 19.0);
+  show('#cursor', 19.05, 0.15);
+  cursorTo('#prepBtn', 19.05, 0.25);
+  click('#prepBtn', 19.3);
+  tl.set('#miBulk', { backgroundColor: 'rgba(0,0,0,0)' }, 19.0);
+  show('#prepMenu', 19.32, 0.12);
+  cursorTo('#miRemote', 19.4, 0.2);
+  tl.to('#miRemote', { backgroundColor: '#1c2027', duration: 0.1 }, 19.55);
+  hide('#prepMenu', 19.7, 0.12);
+  hide('#cursor', 19.7, 0.12);
+  show('#remotePanel', 19.8, 0.25);
+  const rp = R('#remotePanel');
+  cam(19.75, rp.cx, rp.y + 190, 1.6, 0.65);
+  sub(6, 20.2, 22.8);
+  // 숫자 세 개가 발표장으로
+  const PJ = R('#projector');
+  const codeIn = R('#codeIn');
+  const SC = 0.8333333;
+  ['#d1', '#d2', '#d3'].forEach((d, i) => {
+    const r = R(d);
+    const f = document.createElement('div');
+    f.className = 'abs fly'; f.id = 'fly' + i; f.textContent = $(d).textContent; f.setAttribute('data-layout-allow-overlap', '');
+    f.style.cssText = 'left:0;top:0;width:40px;height:80px;font:700 56px var(--font);color:#F97316;text-align:center;opacity:0;';
+    world.appendChild(f);
+    tl.set(f, { x: r.x, y: r.y + 4 }, 0);
+    tl.set(f, { opacity: 1 }, 20.85);
+    tl.to(f, { x: codeIn.cx + (i - 1) * 58 * SC - 20, y: codeIn.cy - 40, scale: SC * 1.1, duration: 1.5, ease: 'power3.inOut' }, 20.9 + i * 0.08);
+  });
+  tl.to('#d1, #d2, #d3', { opacity: 0.25, duration: 0.2 }, 20.9);
+  cam(20.9, codeIn.cx, codeIn.cy - 30, 1.9, 1.5);
+  hide('#codePh', 21.9, 0.2);
+  tl.to('#codeIn', { borderColor: '#F97316', duration: 0.1 }, 22.4);
+  const go = R('#goBtn');
+  tl.set('#cursor', { x: go.cx + 160, y: go.cy + 120 }, 22.4);
+  show('#cursor', 22.45, 0.12);
+  tl.to('#cursor', { x: go.cx - 6, y: go.cy - 4, duration: 0.35, ease: 'power2.inOut' }, 22.5);
+  click('#goBtn', 22.9);
+  hide('#cursor', 23.05, 0.12);
+  hide('#gate', 23.1, 0.3);
+  hide('.fly', 23.1, 0.25);
+  show('#deckStatus', 23.3, 0.2);
+  show('#liveTag', 23.2, 0.1);
+  hide('#rpOff', 23.2, 0.05); show('#rpOn', 23.2, 0.05);
+  const ds = R('#deckStatus');
+  cam(23.35, ds.cx + 120, ds.cy - 60, 2.3, 0.6);
+  // 폰: QR 스캔 → 연결
+  const PH = R('#phone');
+  cam(24.4, PH.cx, PH.cy, 1.2, 0.7);
+  sub(7, 24.4, 26.8);
+  show('#phScan', 24.55, 0.15);
+  tl.fromTo('#phScan .frame', { scale: 1.15 }, { scale: 1, duration: 0.45, ease: 'power2.out' }, 24.55);
+  hide('#phScan', 25.05, 0.12);
+  hide('#phWait', 25.05, 0.05);
+  show('#phRemote', 25.08, 0.15);
+
+  // ===== 26.8–35.6 발표 시작 + 음성 추적 =====
+  hide('#remotePanel', 26.9, 0.2);
+  cam(26.8, A.cx, A.cy, 0.95, 0.8);
+  const cb = R('#cvBtn');
+  tl.set('#cursor', { x: cb.cx + 260, y: cb.cy + 200 }, 27.0);
+  show('#cursor', 27.1, 0.12);
+  tl.to('#cursor', { x: cb.cx - 6, y: cb.cy - 4, duration: 0.45, ease: 'power2.inOut' }, 27.15);
+  click('#cvBtn', 27.7);
+  hide('#cover', 27.85, 0.3);
+  tl.to('#deck1', { opacity: 1, duration: 0.01 }, 27.85);
+  cursorTo('#micBtn', 27.9, 0.3);
+  click('#micBtn', 28.2);
+  show('#micOn', 28.25, 0.12);
+  hide('#cursor', 28.4, 0.15);
+  show('#voiceBar', 28.3, 0.2);
+  hide('#paceDim', 28.3, 0.1); show('#paceSub1', 28.3, 0.1); hide('#paceSub0', 28.3, 0.1);
+  hide('#schedDim', 28.3, 0.1); show('#schedOk', 28.3, 0.1); hide('#schedSub0', 28.3, 0.1);
+  const sa = R('#script1');
+  cam(28.2, sa.cx, sa.cy + 40, 1.32, 0.7);
+  // 읽은 단어 칠하기 (57%)
+  const nRead = Math.round(words.length * 0.57);
+  const T0 = 28.6, DT = 3.8 / nRead;
+  words.slice(0, nRead).forEach((w, i) => {
+    tl.to(w, { color: '#F97316', backgroundColor: 'rgba(249,115,22,.24)', boxShadow: '0 0 0 4px rgba(249,115,22,.24)', duration: 0.12 }, T0 + i * DT);
+    if (i < nRead - 1) tl.to(w, { backgroundColor: 'rgba(249,115,22,0)', boxShadow: '0 0 0 4px rgba(249,115,22,0)', duration: 0.12 }, T0 + (i + 1) * DT);
+  });
+  const heard = $$('.vb-heard span');
+  heard.forEach((h, i) => { show(h, T0 + i * 1.0, 0.1); if (i < heard.length - 1) hide(h, T0 + (i + 1) * 1.0, 0.1); });
+  sub(8, 28.9, 31.4);
+  // 시계 흐름
+  count('#remain', 18 * 60, 17 * 60 + 33, 28.0, 4.4, mmss);
+  count('#totEl', 0, 27, 28.0, 4.4, mmss);
+  count('#hdElapsed', 0, 27, 28.0, 4.4, (v) => '00:' + mmss(v));
+  count('#pgEl', 0, 27, 28.0, 4.4, (v) => String(Math.round(v)));
+  tl.fromTo('#readFill', { scaleX: 0 }, { scaleX: 0.57, duration: 3.8, ease: 'none' }, T0);
+  count('#readPct', 0, 57, T0, 3.8, (v) => v < 0.5 ? '–' : Math.round(v) + '%');
+  tl.fromTo('#timeFill', { scaleX: 0 }, { scaleX: 0.54, duration: 4.4, ease: 'none' }, 28.0);
+  count('#timePct', 0, 54, 28.0, 4.4, (v) => Math.round(v) + '%');
+  show('#paceOk', 29.0, 0.15);
+  tl.fromTo('#allReadFill', { scaleX: 0 }, { scaleX: 0.03, duration: 3.8, ease: 'none' }, T0);
+  count('#allReadPct', 0, 3, T0, 3.8, (v) => Math.round(v) + '%');
+  tl.fromTo('#allTimeFill', { scaleX: 0 }, { scaleX: 0.025, duration: 4.4, ease: 'none' }, 28.0);
+  count('#allTimePct', 0, 3, 28.0, 4.4, (v) => Math.round(v) + '%');
+  show('#schedSubA', 28.3, 0.1);
+  const pc = R('#paceCard');
+  cam(32.0, pc.cx + 40, pc.cy - 120, 1.75, 0.65);
+  sub(9, 32.6, 35.2);
+
+  // ===== 35.6–40.2 폰 리모컨 =====
+  count('#phRemain', 18 * 60, 17 * 60 + 33, 28.0, 4.4, mmss);
+  show('#phPace', 35.0, 0.1);
+  const venueCx = (PJ.x + PH.x + PH.w) / 2, venueCy = (PJ.y + PJ.y + PJ.h) / 2 + 60;
+  cam(35.6, venueCx, venueCy, 0.86, 0.8);
+  sub(10, 36.3, 38.8);
+  const nx = R('#phNext');
+  tl.set('#cursor', { x: nx.cx + 70, y: nx.cy + 120 }, 36.4);
+  show('#cursor', 36.45, 0.12);
+  tl.to('#cursor', { x: nx.cx - 6, y: nx.cy - 4, duration: 0.35, ease: 'power2.inOut' }, 36.5);
+  click('#phNext', 36.9);
+  hide('#cursor', 37.1, 0.12);
+  tl.set('#pulse', { x: nx.cx - 35, y: nx.cy - 35, scale: 0.6 }, 0);
+  tl.to('#pulse', { opacity: 1, duration: 0.05 }, 36.95);
+  tl.to('#pulse', { x: PJ.cx - 35, y: PJ.cy - 35, scale: 1.6, duration: 0.5, ease: 'power2.in' }, 36.97);
+  tl.to('#pulse', { opacity: 0, duration: 0.12 }, 37.45);
+  tl.fromTo('#deck2', { opacity: 0, x: 120 }, { opacity: 1, x: 0, duration: 0.35, ease: 'power2.out' }, 37.45);
+  tl.set('#deck1', { opacity: 0 }, 37.8);
+  count('#phNum', 1, 2, 37.45, 0.01, (v) => String(Math.round(v)).padStart(2, '0'));
+  hide('#phNote1', 37.45, 0.15); show('#phNote2', 37.5, 0.15);
+  tl.set('#phPace', { opacity: 0 }, 37.45);
+  // 노트북도 같이 넘어감
+  count('#sNum', 1, 2, 37.45, 0.01, (v) => String(Math.round(v)).padStart(2, '0'));
+  tl.set('#script1', { opacity: 0 }, 37.45);
+  tl.set('#script2', { opacity: 1 }, 37.45);
+  tl.set('#th1', { opacity: 0 }, 37.45); tl.set('#th2', { opacity: 1 }, 37.45);
+  tl.set('#paceOk', { opacity: 0 }, 37.45); tl.set('#paceMeas', { opacity: 1 }, 37.45);
+  tl.set('#paceSub1', { opacity: 0 }, 37.45);
+  tl.set('#readFill', { scaleX: 0 }, 37.45); tl.set('#timeFill', { scaleX: 0 }, 37.45);
+  count('#readPct', 57, 0, 37.45, 0.01, (v) => v < 0.5 ? '–' : Math.round(v) + '%');
+  count('#timePct', 54, 0, 37.46, 0.01, (v) => Math.round(v) + '%');
+  count('#pgEl', 27, 0, 37.45, 0.01, (v) => String(Math.round(v)));
+
+  // ===== 40.0–42.9 전체 일정 =====
+  const sc = R('#schedCard');
+  const fTop = R('#sNum').y - 30, fBot = R('#schedSubB').y + 50;
+  const fS = Math.min(1.4, 1000 / (fBot - fTop));
+  cam(40.0, sc.cx + 520, (fTop + fBot) / 2, fS, 0.7);
+  count('#pgEl', 0, 12, 40.8, 0.4, (v) => String(Math.round(v)));
+  tl.to('#readFill', { scaleX: 0.25, duration: 0.4, ease: 'none' }, 40.8);
+  tl.to('#timeFill', { scaleX: 0.24, duration: 0.4, ease: 'none' }, 40.8);
+  count('#readPct', 0, 25, 40.8, 0.4, (v) => v < 0.5 ? '–' : Math.round(v) + '%');
+  count('#timePct', 0, 24, 40.81, 0.4, (v) => Math.round(v) + '%');
+  hide('#paceMeas', 41.2, 0.1); show('#paceOk', 41.2, 0.1); show('#paceSub2', 41.2, 0.1);
+  count('#sNum', 2, 12, 40.4, 0.8, (v) => String(Math.round(v)).padStart(2, '0'));
+  tl.set('#script2', { opacity: 0 }, 40.8); tl.set('#script12', { opacity: 1 }, 40.8);
+  tl.set('#th2', { opacity: 0 }, 40.8); tl.set('#th12', { opacity: 1 }, 40.8);
+  count('#remain', 17 * 60 + 33, 7 * 60 + 20, 40.4, 0.8, mmss);
+  count('#totEl', 27, 640, 40.4, 0.8, mmss);
+  count('#hdElapsed', 27, 640, 40.4, 0.8, (v) => '00:' + mmss(v));
+  tl.to('#allReadFill', { scaleX: 0.58, duration: 0.8, ease: 'power1.inOut' }, 40.4);
+  tl.to('#allTimeFill', { scaleX: 0.59, duration: 0.8, ease: 'power1.inOut' }, 40.4);
+  count('#allReadPct', 3, 58, 40.4, 0.8, (v) => Math.round(v) + '%');
+  count('#allTimePct', 3, 59, 40.4, 0.8, (v) => Math.round(v) + '%');
+  hide('#schedSubA', 41.2, 0.1); show('#schedSubB', 41.2, 0.1);
+  tl.fromTo('#schedSubB', { color: '#eceef1' }, { color: '#a9afb8', duration: 0.6 }, 41.3);
+  sub(11, 40.9, 42.9);
+
+  // ===== 42.9–46.7 돌아보기: 시간 막대가 시간표로 =====
+  const tb = R('#allTimeBar');
+  const ax = R('#axis');
+  const fl = document.createElement('div');
+  fl.className = 'abs'; fl.id = 'barFly';
+  fl.style.cssText = 'left:0;top:0;height:14px;background:#a3a9b2;border-radius:3px;opacity:0;transform-origin:0 50%;width:' + tb.w + 'px';
+  world.appendChild(fl);
+  tl.set(fl, { x: tb.x, y: tb.y }, 0);
+  tl.set(fl, { opacity: 1 }, 42.9);
+  tl.to(fl, { x: ax.x, y: ax.y - 4, scaleX: ax.w / tb.w, scaleY: 6 / 14, duration: 1.0, ease: 'power3.inOut' }, 42.95);
+  tl.set('#axis', { scaleX: 0 }, 0);
+  tl.set('#axis', { scaleX: 1 }, 43.95);
+  tl.set(fl, { opacity: 0 }, 43.95);
+  const RT = R('#retro');
+  cam(42.9, RT.cx + 40, RT.cy + 40, 0.58, 1.05);
+  show('#rtH', 43.6, 0.3);
+  tl.to('.tick', { opacity: 1, duration: 0.25, stagger: 0.05 }, 43.9);
+  show('#rowA .rl', 43.95, 0.2);
+  tl.fromTo('#a1', { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: 'power2.out' }, 44.0);
+  tl.fromTo('#a2', { scaleX: 0 }, { scaleX: 1, duration: 0.35, ease: 'power2.out' }, 44.45);
+  show('#aT', 44.75, 0.2); show('#aC', 44.75, 0.25);
+  show('#rowB .rl', 44.25, 0.2);
+  tl.fromTo('#b1', { scaleX: 0 }, { scaleX: 1, duration: 0.45, ease: 'power2.out' }, 44.3);
+  tl.fromTo('#b2', { scaleX: 0 }, { scaleX: 1, duration: 0.3, ease: 'power2.out' }, 44.7);
+  show('#bT', 44.95, 0.2); show('#bC', 44.95, 0.25);
+  show('#retroNote', 45.0, 0.3);
+
+  // ===== 46.74 브랜드 =====
+  cam(46.3, 3700, 1650, 0.255, 1.0);
+  tl.to('#scrim', { opacity: 1, duration: 0.55, ease: 'power2.in' }, 46.35);
+  tl.fromTo('#brandLine', { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.45, ease: 'power3.out' }, 46.74);
+  tl.to('#brandRule', { width: 260, duration: 0.5, ease: 'power2.out' }, 46.9);
+  tl.fromTo('#brandEye', { opacity: 0, y: -14 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' }, 48.76);
+
+  window.__timelines['main'] = tl;
+});
+</script>
+</body>
+</html>
