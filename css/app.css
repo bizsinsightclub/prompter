@@ -266,6 +266,7 @@ header { padding: 18px 36px; background: #000; display: flex; justify-content: s
 .ai-msg { margin-top: 10px; font-size: 13px; font-weight: 700; color: #ccc; min-height: 18px; word-break: keep-all; }
 .ai-msg.ok { color: var(--ok); }
 .ai-msg.err { color: var(--over); }
+.ai-msg.warn { color: var(--accent); }
 .ai-note { font-size: 11px; color: #666; margin-top: 8px; line-height: 1.5; word-break: keep-all; }
 .or-sep { margin: 20px 0 6px; font-size: 12.5px; color: #888; font-weight: 800; display: flex; align-items: center; gap: 10px; }
 .or-sep::before, .or-sep::after { content: ''; flex: 1; height: 1px; background: var(--border); }
@@ -283,3 +284,13 @@ header { padding: 18px 36px; background: #000; display: flex; justify-content: s
 .al-short { color: #3dd6ff !important; font-weight: 800; }
 .al-fit { color: var(--ok) !important; }
 .al-dim { color: #555 !important; }
+
+/* AI 제공사 · 모델 · 생각 깊이 선택 */
+.ai-grid { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 8px; margin-top: 12px; }
+.ai-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: 800; color: #998; letter-spacing: 0.04em; }
+.ai-grid select { width: 100%; min-width: 0; }
+.ai-box select:disabled { opacity: 0.5; }
+.ai-row.hidden { display: none; }
+.ai-row #aiPasscode { flex: 1; min-width: 160px; }
+.ai-chk b { color: #ddd; }
+@media (max-width: 760px) { .ai-grid { grid-template-columns: 1fr; } }

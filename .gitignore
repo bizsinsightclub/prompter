@@ -8,3 +8,7 @@ _test.pdf
 .playwright-mcp/
 .DS_Store
 Thumbs.db
+
+# Vercel 서버 함수 의존성
+node_modules/
+.vercel/

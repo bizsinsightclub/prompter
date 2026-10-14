@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "api/generate.mjs": {
+      "maxDuration": 300,
+      "supportsCancellation": true
+    }
+  }
+}

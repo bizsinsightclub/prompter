@@ -72,26 +72,30 @@
       <input id="aiExtra" class="grow-in" placeholder="추가 요청 (선택) — 예: 청중은 임원진, 비용 절감 효과를 강조, 너무 딱딱하지 않게">
     </div>
 
-    <!-- 방법 A: Claude 가 슬라이드를 직접 읽고 작성 -->
+    <!-- 방법 A: AI 가 슬라이드를 직접 읽고 작성 (Claude · ChatGPT · Gemini) -->
     <div class="ai-box">
-      <div class="ai-head"><b>🤖 방법 A — AI가 슬라이드를 직접 읽고 대본 작성</b><span class="ai-tag">Claude API 키 필요</span></div>
-      <p>PDF 각 페이지의 <b>그림과 글자</b>를 Claude에게 보여 주고, 총 발표 시간에 맞춘 <b>페이지별 대본과 배정 시간</b>을 받아 아래 칸에 채웁니다. 확인 후 ‘대본 적용’을 누르세요.</p>
-      <div class="ai-row">
-        <input id="aiKey" type="password" placeholder="sk-ant-… (Anthropic API 키)" autocomplete="off" spellcheck="false">
+      <div class="ai-head"><b>🤖 방법 A — AI가 슬라이드를 직접 읽고 대본 작성</b><span class="ai-tag">Claude · ChatGPT · Gemini</span></div>
+      <p>PDF 각 페이지의 <b>그림과 글자</b>를 AI에게 보여 주고, 총 발표 시간에 맞춘 <b>페이지별 대본과 배정 시간</b>을 받아 아래 칸에 채웁니다. 확인 후 ‘대본 적용’을 누르세요.</p>
+      <div class="ai-grid">
+        <label>AI<select id="aiProvider" title="AI 제공사"></select></label>
+        <label>모델<select id="aiModel" title="모델"></select></label>
+        <label>생각 깊이<select id="aiEffort" title="높을수록 꼼꼼하지만 느리고 비쌉니다"></select></label>
+      </div>
+      <div class="ai-row hidden" id="aiServerRow">
+        <label class="ai-chk"><input type="checkbox" id="aiUseServer" checked> <b>팀 서버 키 사용</b> — 내 키 없이 팀 암호로</label>
+        <input id="aiPasscode" type="password" placeholder="팀 암호" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="ai-row" id="aiKeyRow">
+        <input id="aiKey" type="password" placeholder="API 키" autocomplete="off" spellcheck="false">
         <label class="ai-chk"><input type="checkbox" id="aiRemember" checked> 이 브라우저에 기억</label>
-        <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">키 발급 ↗</a>
+        <a id="aiKeyLink" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">키 발급 ↗</a>
       </div>
       <div class="ai-row">
-        <select id="aiModel" title="모델">
-          <option value="claude-opus-5-5">Claude Opus 5.5 (기본 · 가장 꼼꼼함)</option>
-          <option value="claude-sonnet-5-5">Claude Sonnet 5.5 (빠르고 저렴)</option>
-          <option value="claude-haiku-5-5">Claude Haiku 5.5 (가장 저렴)</option>
-        </select>
         <button class="btn primary" id="aiGo" onclick="runAI()">🤖 슬라이드 읽고 대본 생성</button>
         <button class="btn" id="aiStop" onclick="stopAI()" disabled>중지</button>
       </div>
       <div class="ai-msg" id="aiMsg"></div>
-      <div class="ai-note">키는 이 브라우저에만 저장되고, 슬라이드는 이 브라우저에서 Anthropic API로 바로 전송됩니다(이 앱은 서버가 없습니다). 요금은 키 주인의 계정에 청구됩니다.</div>
+      <div class="ai-note" id="aiNote"></div>
     </div>
 
     <div class="or-sep">방법 B — 쓰던 AI 채팅(ChatGPT·Claude 등)에 직접 붙여넣기</div>
@@ -503,7 +507,7 @@ async function prefetchSlideTexts(){
 function openBulk(){
   if(!aiJob){ document.getElementById('bulkText').value=''; document.getElementById('aiMsg').innerText=''; }
   document.getElementById('bulkMsg').innerText='';
-  document.getElementById('aiKey').value = AIScript.getKey();
+  initAIUI();
   document.getElementById('bulkPanel').classList.add('show');
   slideTexts = null; prefetchSlideTexts();
 }
@@ -531,38 +535,106 @@ async function copyLLMPrompt(){
   catch(e){ document.getElementById('bulkText').value = prompt; document.getElementById('bulkMsg').innerText='클립보드 권한이 없어 입력칸에 넣었습니다. 복사해 사용하세요.'; }
 }
 
-/* ===== AI 대본 생성 (Claude 가 슬라이드 이미지 + 글자를 읽고 작성) ===== */
-let aiJob = null;
+/* ===== AI 대본 생성 (Claude · ChatGPT · Gemini 가 슬라이드 이미지 + 글자를 읽고 작성) ===== */
+let aiJob = null, AI = null;   // AI = { PROVIDERS, EFFORT_LABELS, server }
 function aiMsg(text, kind){ const el=document.getElementById('aiMsg'); el.className='ai-msg'+(kind?' '+kind:''); el.innerText=text; }
 function setAIBusy(busy){
   document.getElementById('aiGo').disabled = busy;
   document.getElementById('aiStop').disabled = !busy;
+  ['aiProvider','aiModel','aiEffort'].forEach((id)=> document.getElementById(id).disabled = busy);
 }
+function lsGet(k, d){ try{ return localStorage.getItem(k) || d; }catch(e){ return d; } }
+function lsSet(k, v){ try{ localStorage.setItem(k, v); }catch(e){} }
+function fillSelect(sel, items, value){
+  sel.innerHTML = items.map(([v, label])=> `<option value="${esc(v)}">${esc(label)}</option>`).join('');
+  sel.value = items.some(([v])=> v === value) ? value : items[0][0];
+}
+const aiProv = ()=> document.getElementById('aiProvider').value;
+const aiModelId = ()=> document.getElementById('aiModel').value;
+const selText = (id)=> (document.getElementById(id).selectedOptions[0] || {}).text || '';
+function serverHas(id){ return !!(AI && AI.server && AI.server.providers && AI.server.providers[id]); }
+
+/** 패널을 열 때: 제공사·모델 목록과 팀 서버(Vercel) 여부를 불러와 선택칸 채우기 */
+async function initAIUI(){
+  if(!AI){
+    try{ AI = await AIScript.init(); }
+    catch(e){ aiMsg('AI 모듈을 불러오지 못했습니다. 인터넷 연결을 확인하세요.', 'err'); return; }
+  }
+  const items = Object.entries(AI.PROVIDERS).map(([id, p])=> [id, p.label + (serverHas(id) ? ' · 팀 서버' : '')]);
+  fillSelect(document.getElementById('aiProvider'), items, lsGet('aiProvider', 'anthropic'));
+  document.getElementById('aiPasscode').value = AIScript.getPasscode();
+  document.getElementById('aiUseServer').checked = lsGet('aiUseServer', '1') === '1';
+  onProviderChange(true);
+}
+/** keepTyped: 패널 준비 중에 먼저 입력해 둔 키는 지우지 않음 */
+function onProviderChange(keepTyped){
+  const id = aiProv(), p = AI.PROVIDERS[id];
+  lsSet('aiProvider', id);
+  fillSelect(document.getElementById('aiModel'), p.models.map((m)=> [m.id, m.label]), lsGet('aiModel:'+id, p.defaultModel));
+  const key = document.getElementById('aiKey');
+  key.value = AIScript.getKey(id) || (keepTyped === true ? key.value : '');
+  key.placeholder = `${p.keyHint} (${p.keyName})`;
+  document.getElementById('aiKeyLink').href = p.keyUrl;
+  onModelChange();
+  updateAIMode();
+}
+function onModelChange(){
+  const id = aiProv(), mid = aiModelId();
+  const m = AI.PROVIDERS[id].models.find((x)=> x.id === mid);
+  lsSet('aiModel:'+id, mid);
+  fillSelect(document.getElementById('aiEffort'),
+    m.efforts.map((e)=> [e, AI.EFFORT_LABELS[e] + (e === m.effort ? ' — 기본' : '')]),
+    lsGet(`aiEffort:${id}:${mid}`, m.effort));
+}
+/** 팀 서버 키를 쓸 수 있으면 '팀 서버' 줄을 보이고, 쓰는 중에는 내 키 입력칸을 숨김 */
+function updateAIMode(){
+  const id = aiProv(), p = AI.PROVIDERS[id], srv = serverHas(id);
+  const useServer = srv && document.getElementById('aiUseServer').checked;
+  document.getElementById('aiServerRow').classList.toggle('hidden', !srv);
+  document.getElementById('aiKeyRow').classList.toggle('hidden', useServer);
+  document.getElementById('aiNote').innerText = useServer
+    ? `팀 서버(Vercel)에 넣어 둔 ${p.label} 키로 호출합니다. 요금은 서버 키 주인의 계정에 청구됩니다.`
+    : `키는 이 브라우저에만 저장되고, 슬라이드는 이 브라우저에서 ${p.label} API로 바로 전송됩니다(다른 서버를 거치지 않음). 요금은 키 주인의 계정에 청구됩니다.`
+      + (AI.server && AI.server.needsPasscode ? ' — 이 서버에는 API 키가 있지만 팀 암호(APP_PASSCODE)가 설정되지 않아 팀 서버 방식은 꺼져 있습니다.' : '');
+}
+document.getElementById('aiProvider').addEventListener('change', onProviderChange);
+document.getElementById('aiModel').addEventListener('change', onModelChange);
+document.getElementById('aiEffort').addEventListener('change', (e)=> lsSet(`aiEffort:${aiProv()}:${aiModelId()}`, e.target.value));
+document.getElementById('aiUseServer').addEventListener('change', (e)=>{ lsSet('aiUseServer', e.target.checked ? '1' : '0'); updateAIMode(); });
+
 async function runAI(){
   if(aiJob) return;
+  if(!AI){ await initAIUI(); if(!AI) return; }
   if(!total){ aiMsg('먼저 발표 PDF를 불러오세요.', 'err'); return; }
+  const provider = aiProv(), P = AI.PROVIDERS[provider];
+  const via = (serverHas(provider) && document.getElementById('aiUseServer').checked) ? 'server' : 'direct';
   const key = document.getElementById('aiKey').value.trim();
-  if(!key){ aiMsg('Anthropic API 키를 입력하세요. (오른쪽 ‘키 발급’ 링크)', 'err'); document.getElementById('aiKey').focus(); return; }
-  AIScript.saveKey(key, document.getElementById('aiRemember').checked);
+  const passcode = document.getElementById('aiPasscode').value.trim();
+  if(via === 'direct' && !key){ aiMsg(`${P.keyName}를 입력하세요. (오른쪽 ‘키 발급’ 링크)`, 'err'); document.getElementById('aiKey').focus(); return; }
+  if(via === 'server' && !passcode){ aiMsg('팀 암호를 입력하세요.', 'err'); document.getElementById('aiPasscode').focus(); return; }
+  if(via === 'direct') AIScript.saveKey(provider, key, document.getElementById('aiRemember').checked);
+  else AIScript.savePasscode(passcode);
+  const modelName = selText('aiModel').split(' — ')[0], effortName = selText('aiEffort').split(' — ')[0];
   const ta = document.getElementById('bulkText');
   ta.value = '';
   document.getElementById('bulkMsg').innerText = '';
-  aiJob = {}; setAIBusy(true);
+  const job = aiJob = {}; setAIBusy(true);
   let chars = 0;
   try{
     const r = await AIScript.generate(Object.assign(promptOptions(), {
-      apiKey: key, model: document.getElementById('aiModel').value, job: aiJob,
-      onStep: (i,n)=> aiMsg(`① 슬라이드 읽는 중… ${i}/${n}`),
-      onStart: ()=> aiMsg('② AI가 슬라이드를 보고 대본을 쓰는 중… (장수가 많으면 1~3분)'),
-      onText: (d)=>{ ta.value += d; chars += d.length; ta.scrollTop = ta.scrollHeight; aiMsg(`② AI가 대본을 쓰는 중… ${chars.toLocaleString()}자`); }
+      provider, model: aiModelId(), effort: document.getElementById('aiEffort').value, via, apiKey: key, passcode, job,
+      onStep: (i,n,level)=> aiMsg(`① 슬라이드 읽는 중… ${i}/${n}` + (level ? ` (용량 한도에 맞춰 이미지 축소 ${level}단계)` : '')),
+      onStart: ()=> aiMsg(`② 대본 작성 중 — ${modelName} · 생각 깊이 ${effortName}. 장수가 많거나 생각 깊이가 높으면 몇 분 걸립니다`),
+      onText: (d)=>{ ta.value += d; chars += d.length; ta.scrollTop = ta.scrollHeight; aiMsg(`② 대본 작성 중 — ${modelName} · ${chars.toLocaleString()}자`); }
     }));
     const pages = Object.keys(Notes.parseBulk(ta.value).notes).length;
-    if(r.stopReason === 'refusal'){ ta.value = ''; aiMsg('AI가 이 요청에 응답하지 않았습니다. 추가 요청 문구를 바꿔 다시 시도하세요.', 'err'); }
-    else if(r.stopReason === 'max_tokens') aiMsg(`출력 한도에 도달해 일부만 생성됐습니다 (${pages}/${total}쪽). 확인 후 적용하거나 다시 시도하세요.`, 'err');
+    if(r.status === 'refusal'){ ta.value = ''; aiMsg('AI가 이 요청에 응답하지 않았습니다. 추가 요청 문구를 바꾸거나 다른 모델로 다시 시도하세요.', 'err'); }
+    else if(r.status === 'max_tokens') aiMsg(`출력 한도에 도달해 일부만 생성됐습니다 (${pages}/${total}쪽). 확인 후 적용하거나 생각 깊이를 낮춰 다시 시도하세요.`, 'err');
     else if(!pages) aiMsg('결과에서 페이지 구분(=== 1 ===)을 찾지 못했습니다. 다시 시도해 보세요.', 'err');
-    else aiMsg(`✓ 완료 — ${pages}/${total}쪽 대본과 배정 시간이 생성됐습니다. 내용을 확인하고 ‘대본 적용’을 누르세요.`, 'ok');
+    else if(pages < total) aiMsg(`⚠ ${pages}/${total}쪽만 생성됐습니다 (${modelName} · ${effortName}). 적용하면 빠진 쪽은 기존 대본이 그대로 남습니다. 다시 시도하거나 직접 채워 주세요.`, 'warn');
+    else aiMsg(`✓ 완료 — ${pages}/${total}쪽 대본과 배정 시간이 생성됐습니다 (${modelName} · ${effortName}). 내용을 확인하고 ‘대본 적용’을 누르세요.`, 'ok');
   }catch(e){
-    aiMsg(await AIScript.explainError(e), 'err');
+    aiMsg(await AIScript.explainError(e, job, via), 'err');
   }finally{
     aiJob = null; setAIBusy(false);
   }

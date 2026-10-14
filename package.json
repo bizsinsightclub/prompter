@@ -1,0 +1,13 @@
+{
+  "name": "pdf-teleprompter",
+  "private": true,
+  "description": "PDF 텔레프롬프터 — 화면은 빌드 없는 정적 파일. 이 의존성은 Vercel 서버 함수(api/)에서만 쓴다.",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.128.0",
+    "@google/genai": "2.24.0",
+    "openai": "7.24.0"
+  }
+}
