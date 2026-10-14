@@ -89,6 +89,22 @@
     return url;
   }
 
+  /** 페이지의 글자(텍스트 레이어) 추출 — AI 대본 생성 시 이미지와 함께 전달. 스캔본 PDF면 빈 문자열. */
+  async function pageText(idx, maxLen) {
+    if (!pdfDoc) return '';
+    const key = `text@${idx}`;
+    if (!cache.has(key)) {
+      let out = '';
+      try {
+        const page = await pdfDoc.getPage(idx + 1);
+        const tc = await page.getTextContent();
+        for (const it of tc.items) { if ('str' in it) out += it.str + (it.hasEOL ? '\n' : ''); }
+      } catch (e) {}
+      cache.set(key, out.replace(/[ \t ]+/g, ' ').replace(/ *\n[\s]*/g, '\n').trim());
+    }
+    return cache.get(key).slice(0, maxLen || 2000);
+  }
+
   async function aspectRatio() {
     if (!pdfDoc) return 16 / 9;
     const page = await pdfDoc.getPage(1);
@@ -184,7 +200,7 @@
   }
 
   global.PdfRender = {
-    loadPdf, renderPageDataURL, pageCount, isLoaded, aspectRatio, name,
+    loadPdf, renderPageDataURL, pageText, pageCount, isLoaded, aspectRatio, name,
     loadStored, clearStored, saveMedia, loadMediaURL, deleteMedia
   };
 })(window);

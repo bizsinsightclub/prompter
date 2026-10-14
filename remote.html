@@ -23,6 +23,8 @@
   .timer{font-size:34px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;}
   .timer.over{color:#e33;}
   .timer .cap{font-size:12px;color:var(--dim);font-weight:700;letter-spacing:0.1em;margin-right:8px;}
+  .pace{margin-top:8px;font-size:14px;font-weight:800;color:var(--dim);word-break:keep-all;}
+  .pace.ok{color:#0c0;} .pace.late{color:var(--accent);} .pace.over{color:#e33;} .pace.fast{color:#3dd6ff;}
   .note{margin-top:14px;font-size:15px;color:#bbb;line-height:1.55;word-break:keep-all;max-height:22vh;overflow-y:auto;}
   .note b{color:#fff;}
   .pad{flex:1;display:flex;gap:10px;padding:14px;min-height:0;}
@@ -53,6 +55,7 @@
 
 <div class="info">
   <div class="timer" id="timer"><span class="cap">남은 시간</span><span id="remain">18:00</span></div>
+  <div class="pace" id="pace"></div>
   <div class="note" id="note"></div>
 </div>
 
@@ -117,6 +120,9 @@ function render(d){
   document.getElementById('timer').classList.toggle('over', !!d.over);
   document.getElementById('coverBtn').innerText = d.covered ? '▶ 발표 시작' : '⏸ 가림';
   document.getElementById('note').innerHTML = d.note || '';   // 노트는 이미 HTML
+  const p = d.pace, pe = document.getElementById('pace');   // 음성 추적 중일 때만 옴
+  pe.className = 'pace' + (p && p.cls ? ' ' + p.cls : '');
+  pe.innerText = p ? `🎙 읽음 ${p.read}% · ${p.text}` : '';
 }
 
 async function keepAwake(){ try{ if('wakeLock' in navigator) await navigator.wakeLock.request('screen'); }catch(e){} }

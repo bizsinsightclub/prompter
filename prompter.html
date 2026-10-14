@@ -37,6 +37,7 @@
     <button class="btn" onclick="showStart()">📄 PDF 교체</button>
     <button class="btn" onclick="openBulk()">⤵ 대본 일괄 입력</button>
     <button class="btn" id="remoteBtn" onclick="toggleRemote()">🔗 기기 연결</button>
+    <button class="btn" id="micBtn" onclick="toggleVoice()" title="마이크로 읽은 위치를 따라가며 하이라이트 (M)">🎙 음성 추적</button>
     <button class="btn" id="coverBtn" onclick="coverShow()">가림 (Esc)</button>
     <button class="btn primary" id="deckBtn" onclick="toggleDeck()">프로젝터에 슬라이드 띄우기</button>
   </div>
@@ -62,7 +63,38 @@
 <!-- ===== 일괄 입력 패널 ===== -->
 <div id="bulkPanel">
   <div class="bulk-card">
-    <h2>대본 일괄 입력 — LLM으로 한 번에 작성하기</h2>
+    <h2>대본 일괄 입력 — AI로 한 번에 작성하기</h2>
+    <div class="bulk-opts">
+      <select id="aiLang" title="대본 언어">
+        <option value="ko">한국어 대본</option>
+        <option value="en">English script</option>
+      </select>
+      <input id="aiExtra" class="grow-in" placeholder="추가 요청 (선택) — 예: 청중은 임원진, 비용 절감 효과를 강조, 너무 딱딱하지 않게">
+    </div>
+
+    <!-- 방법 A: Claude 가 슬라이드를 직접 읽고 작성 -->
+    <div class="ai-box">
+      <div class="ai-head"><b>🤖 방법 A — AI가 슬라이드를 직접 읽고 대본 작성</b><span class="ai-tag">Claude API 키 필요</span></div>
+      <p>PDF 각 페이지의 <b>그림과 글자</b>를 Claude에게 보여 주고, 총 발표 시간에 맞춘 <b>페이지별 대본과 배정 시간</b>을 받아 아래 칸에 채웁니다. 확인 후 ‘대본 적용’을 누르세요.</p>
+      <div class="ai-row">
+        <input id="aiKey" type="password" placeholder="sk-ant-… (Anthropic API 키)" autocomplete="off" spellcheck="false">
+        <label class="ai-chk"><input type="checkbox" id="aiRemember" checked> 이 브라우저에 기억</label>
+        <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">키 발급 ↗</a>
+      </div>
+      <div class="ai-row">
+        <select id="aiModel" title="모델">
+          <option value="claude-opus-5-5">Claude Opus 5.5 (기본 · 가장 꼼꼼함)</option>
+          <option value="claude-sonnet-5-5">Claude Sonnet 5.5 (빠르고 저렴)</option>
+          <option value="claude-haiku-5-5">Claude Haiku 5.5 (가장 저렴)</option>
+        </select>
+        <button class="btn primary" id="aiGo" onclick="runAI()">🤖 슬라이드 읽고 대본 생성</button>
+        <button class="btn" id="aiStop" onclick="stopAI()" disabled>중지</button>
+      </div>
+      <div class="ai-msg" id="aiMsg"></div>
+      <div class="ai-note">키는 이 브라우저에만 저장되고, 슬라이드는 이 브라우저에서 Anthropic API로 바로 전송됩니다(이 앱은 서버가 없습니다). 요금은 키 주인의 계정에 청구됩니다.</div>
+    </div>
+
+    <div class="or-sep">방법 B — 쓰던 AI 채팅(ChatGPT·Claude 등)에 직접 붙여넣기</div>
     <div class="bulk-steps">
       <div class="bstep">
         <span class="bn">1</span>
@@ -70,6 +102,7 @@
           <b>LLM 프롬프트를 복사한다</b>
           <p>아래 버튼을 누르면 “페이지별 대본을 <code>=== 1 ===</code> 형식으로 써 달라”는 프롬프트가 복사됩니다.</p>
           <button class="btn primary" onclick="copyLLMPrompt()">📋 LLM 프롬프트 복사</button>
+          <label class="ai-chk" style="margin-top:8px;"><input type="checkbox" id="withText" checked> 슬라이드에서 뽑은 글자도 프롬프트에 함께 넣기</label>
         </div>
       </div>
       <div class="bstep">
@@ -129,6 +162,30 @@
   </div>
 </div>
 
+<!-- ===== 장표별 시간 배분 패널 ===== -->
+<div id="allocPanel">
+  <div class="bulk-card">
+    <h2>⏱ 장표별 시간 배분</h2>
+    <div class="bulk-desc" id="allocSummary"></div>
+    <div class="bulk-actions">
+      <button class="btn primary" onclick="allocProportional()">⚖ 대본 분량에 맞춰 자동 배분</button>
+      <button class="btn" onclick="allocClear()">균등 배분 (개별 설정 지우기)</button>
+    </div>
+    <div class="bulk-desc">‘예상 낭독’은 대본을 소리 내어 읽는 데 걸릴 시간입니다. <span class="al-over">빨강</span> = 배정보다 김 · <span class="al-short">파랑</span> = 배정보다 많이 짧음. 배정 칸을 비우면 균등 배분값을 씁니다.</div>
+    <div class="alloc-wrap">
+      <table class="alloc-table">
+        <thead><tr><th>#</th><th>대본 미리보기</th><th>분량(음절)</th><th>예상 낭독</th><th>배정(초)</th></tr></thead>
+        <tbody id="allocBody"></tbody>
+      </table>
+    </div>
+    <div class="bulk-msg" id="allocMsg"></div>
+    <div class="bulk-actions">
+      <span class="grow"></span>
+      <button class="btn primary" onclick="closeAlloc()">닫기</button>
+    </div>
+  </div>
+</div>
+
 <div id="main">
   <div id="sidebar">
     <div class="thumb-container">
@@ -149,8 +206,29 @@
       </div>
       <div class="target-set">총 발표 시간 <input id="totalMin" type="number" min="1" max="600" value="18"> 분</div>
     </div>
-    <div class="pace" id="paceBar"><i id="paceFill"></i></div>
-    <div class="rec-set">이 페이지 권장 <input id="recInput" type="number" min="5" step="5" value="40"> 초 <span class="rec-hint">(발표자 설정·저장)</span></div>
+
+    <!-- 이 장표: 배정 시간 · 읽은 분량 · 페이스 -->
+    <div class="pace-card">
+      <div class="pc-head">
+        <span class="pc-cap">이 장표</span>
+        <span class="pc-alloc">배정 <input id="recInput" type="number" min="5" step="5" value="40" title="이 장표에 배정한 시간(초) — 저장됨"> 초</span>
+      </div>
+      <div class="pc-row"><span class="pc-lbl">읽음</span><div class="pc-bar read"><i id="readFill"></i></div><b class="pc-val" id="readPct">–</b></div>
+      <div class="pc-row"><span class="pc-lbl">시간</span><div class="pc-bar time" id="paceBar"><i id="paceFill"></i></div><b class="pc-val" id="timePct">0%</b></div>
+      <div class="pc-status dim" id="paceStatus">—</div>
+      <div class="pc-sub" id="paceSub"></div>
+    </div>
+    <!-- 전체 일정 -->
+    <div class="pace-card">
+      <div class="pc-head">
+        <span class="pc-cap">전체 일정</span>
+        <button class="pc-link" onclick="openAlloc()">⏱ 시간 배분표</button>
+      </div>
+      <div class="pc-row"><span class="pc-lbl">대본</span><div class="pc-bar read"><i id="allReadFill"></i></div><b class="pc-val" id="allReadPct">0%</b></div>
+      <div class="pc-row"><span class="pc-lbl">시간</span><div class="pc-bar time" id="allTimeBar"><i id="allTimeFill"></i></div><b class="pc-val" id="allTimePct">0%</b></div>
+      <div class="pc-status dim" id="schedStatus">발표 시작 전</div>
+      <div class="pc-sub" id="schedSub"></div>
+    </div>
 
     <div class="media-box">
       <div class="media-state" id="mediaState">이 페이지 영상 없음</div>
@@ -174,10 +252,22 @@
       <div><b>②</b> ‘프로젝터에 띄우기’ → deck 창(코드 없이 자동)</div>
       <div><b>③</b> 다른 기기 deck 는 3자리 코드 입력</div>
       <div style="margin-top:8px;"><b>→/Space</b> 다음 · <b>←</b> 이전 · <b>E</b> 편집</div>
+      <div><b>M</b> 음성 추적 · <b>[ ]</b> 앞/뒤 문장으로</div>
     </div>
   </div>
 
   <div id="script-area">
+    <div id="voiceBar" class="hidden">
+      <span class="vb-dot" id="vbDot"></span>
+      <span class="vb-state" id="vbState">마이크 연결 중…</span>
+      <span class="vb-lang" id="vbLang" title="지금 인식 중인 언어">한국어</span>
+      <select id="vbMode" title="인식 언어 — 자동이면 대본의 한/영 구간에 맞춰 바뀝니다">
+        <option value="auto">자동 (한/영)</option>
+        <option value="ko-KR">한국어 고정</option>
+        <option value="en-US">English 고정</option>
+      </select>
+      <span class="vb-heard" id="vbHeard"></span>
+    </div>
     <div id="toolbar">
       <button title="굵게 (Ctrl+B)" onmousedown="fmt(event,'bold')"><b>B</b></button>
       <button title="기울임 (Ctrl+I)" onmousedown="fmt(event,'italic')"><i>I</i></button>
@@ -224,6 +314,8 @@
 <script src="js/pdf-render.js"></script>
 <script src="js/notes.js"></script>
 <script src="js/sync.js"></script>
+<script src="js/voice.js"></script>
+<script src="js/ai-script.js"></script>
 <script>
 const CFG = window.PROMPTER_CONFIG;
 
@@ -240,9 +332,14 @@ function setTotalMin(min){
   if(a) a.value = min; if(b) b.value = min;
   defaultRec = total ? Math.max(15, Math.round(targetSec/total)) : defaultRec;
   if(!Notes.getTime(currentSlide)) recSec = defaultRec;   // 기본값 쓰는 페이지면 갱신
+  updatePace();
 }
 let slideEnteredAt = Date.now();
 let coverVisible = true, started = false, startTs = null, coverWasUp = false;
+let voiceOn = false;        // 음성 추적(가라오케) 켜짐
+let slideW = [];            // 장표별 대본 분량(한글 음절 환산 가중치)
+let readFrac = 0;           // 이 장표에서 읽은 비율 0~1
+const paceView = { text:'', cls:'' };
 
 /* ===== 시작 화면 / PDF 로드 ===== */
 function showStart(){ document.getElementById('start').classList.remove('hidden'); }
@@ -265,6 +362,7 @@ function afterPdfLoaded(){
   defaultRec = total ? Math.max(15, Math.round(targetSec/total)) : 40;
   document.getElementById('s-file').innerText = PdfRender.name() || '—';
   currentSlide = 0;
+  recomputeWeights();
   goSlide(0);
 }
 
@@ -334,6 +432,7 @@ function renderNote(){
   view.innerHTML = html || '';
   view.classList.toggle('is-empty', !html || !view.textContent.trim().length);
   document.getElementById('script-area').scrollTop = 0;
+  tracker.attach(view);   // 단어 단위로 감싸고 읽은 위치를 처음부터
 }
 function toggleEdit(){ editing ? commitEdit() : openEdit(); }
 function openEdit(){
@@ -342,6 +441,8 @@ function openEdit(){
   if(coverVisible) document.getElementById('cover').classList.add('hidden');
   editing = true;
   const view = document.getElementById('text-view');
+  tracker.pause();
+  view.innerHTML = Notes.get(currentSlide) || '';   // 음성 추적용 단어 span 을 걷어낸 원본으로 편집
   view.contentEditable = 'true';
   document.getElementById('script-area').classList.add('editing');
   document.getElementById('editBtn').classList.add('active');
@@ -363,6 +464,7 @@ function commitEdit(){
   // 편집 전에 가림막이 떠 있었고 아직 발표 시작 전이면 다시 가림
   if(coverWasUp && !started) document.getElementById('cover').classList.remove('hidden');
   coverWasUp = false;
+  recomputeWeights();
   renderNote();
   broadcast();
 }
@@ -391,25 +493,88 @@ let _savedRange = null;
 })();
 
 /* ===== 일괄 입력 ===== */
-function openBulk(){ document.getElementById('bulkText').value=''; document.getElementById('bulkMsg').innerText=''; document.getElementById('bulkPanel').classList.add('show'); document.getElementById('bulkText').focus(); }
+let slideTexts = null;   // 슬라이드별 추출 글자(프롬프트용, 패널 열 때 미리 준비)
+async function prefetchSlideTexts(){
+  if(!PdfRender.isLoaded()) return null;
+  const out = [];
+  for(let i=0;i<total;i++) out.push(await PdfRender.pageText(i, 800));
+  return (slideTexts = out);
+}
+function openBulk(){
+  if(!aiJob){ document.getElementById('bulkText').value=''; document.getElementById('aiMsg').innerText=''; }
+  document.getElementById('bulkMsg').innerText='';
+  document.getElementById('aiKey').value = AIScript.getKey();
+  document.getElementById('bulkPanel').classList.add('show');
+  slideTexts = null; prefetchSlideTexts();
+}
 function closeBulk(){ document.getElementById('bulkPanel').classList.remove('show'); }
 function applyBulk(){
   const txt = document.getElementById('bulkText').value;
   const n = Notes.applyBulk(txt);
   document.getElementById('bulkMsg').innerText = n ? `${n}개 페이지 대본을 적용했습니다.` : '인식된 페이지 구분이 없습니다. === 1 === 형식을 확인하세요.';
-  if(n){ renderNote(); broadcast(); setTimeout(closeBulk, 900); }
+  if(n){
+    recSec = Notes.getTime(currentSlide) || defaultRec;   // 대본에 배정 시간이 들어 있으면 반영
+    document.getElementById('recInput').value = recSec;
+    recomputeWeights(); renderNote(); broadcast(); setTimeout(closeBulk, 900);
+  }
+}
+function promptOptions(){
+  return { totalPages: total, targetSec,
+    lang: document.getElementById('aiLang').value,
+    extra: document.getElementById('aiExtra').value.trim() };
 }
 async function copyLLMPrompt(){
-  const prompt = Notes.llmPrompt(total, targetSec);
+  const o = promptOptions();
+  if(document.getElementById('withText').checked) o.slideTexts = slideTexts || await prefetchSlideTexts();
+  const prompt = Notes.scriptPrompt(o);
   try{ await navigator.clipboard.writeText(prompt); document.getElementById('bulkMsg').innerText='LLM 프롬프트를 복사했습니다. LLM에 붙여넣고 결과를 위 칸에 다시 붙여넣으세요.'; }
   catch(e){ document.getElementById('bulkText').value = prompt; document.getElementById('bulkMsg').innerText='클립보드 권한이 없어 입력칸에 넣었습니다. 복사해 사용하세요.'; }
 }
+
+/* ===== AI 대본 생성 (Claude 가 슬라이드 이미지 + 글자를 읽고 작성) ===== */
+let aiJob = null;
+function aiMsg(text, kind){ const el=document.getElementById('aiMsg'); el.className='ai-msg'+(kind?' '+kind:''); el.innerText=text; }
+function setAIBusy(busy){
+  document.getElementById('aiGo').disabled = busy;
+  document.getElementById('aiStop').disabled = !busy;
+}
+async function runAI(){
+  if(aiJob) return;
+  if(!total){ aiMsg('먼저 발표 PDF를 불러오세요.', 'err'); return; }
+  const key = document.getElementById('aiKey').value.trim();
+  if(!key){ aiMsg('Anthropic API 키를 입력하세요. (오른쪽 ‘키 발급’ 링크)', 'err'); document.getElementById('aiKey').focus(); return; }
+  AIScript.saveKey(key, document.getElementById('aiRemember').checked);
+  const ta = document.getElementById('bulkText');
+  ta.value = '';
+  document.getElementById('bulkMsg').innerText = '';
+  aiJob = {}; setAIBusy(true);
+  let chars = 0;
+  try{
+    const r = await AIScript.generate(Object.assign(promptOptions(), {
+      apiKey: key, model: document.getElementById('aiModel').value, job: aiJob,
+      onStep: (i,n)=> aiMsg(`① 슬라이드 읽는 중… ${i}/${n}`),
+      onStart: ()=> aiMsg('② AI가 슬라이드를 보고 대본을 쓰는 중… (장수가 많으면 1~3분)'),
+      onText: (d)=>{ ta.value += d; chars += d.length; ta.scrollTop = ta.scrollHeight; aiMsg(`② AI가 대본을 쓰는 중… ${chars.toLocaleString()}자`); }
+    }));
+    const pages = Object.keys(Notes.parseBulk(ta.value).notes).length;
+    if(r.stopReason === 'refusal'){ ta.value = ''; aiMsg('AI가 이 요청에 응답하지 않았습니다. 추가 요청 문구를 바꿔 다시 시도하세요.', 'err'); }
+    else if(r.stopReason === 'max_tokens') aiMsg(`출력 한도에 도달해 일부만 생성됐습니다 (${pages}/${total}쪽). 확인 후 적용하거나 다시 시도하세요.`, 'err');
+    else if(!pages) aiMsg('결과에서 페이지 구분(=== 1 ===)을 찾지 못했습니다. 다시 시도해 보세요.', 'err');
+    else aiMsg(`✓ 완료 — ${pages}/${total}쪽 대본과 배정 시간이 생성됐습니다. 내용을 확인하고 ‘대본 적용’을 누르세요.`, 'ok');
+  }catch(e){
+    aiMsg(await AIScript.explainError(e), 'err');
+  }finally{
+    aiJob = null; setAIBusy(false);
+  }
+}
+function stopAI(){ if(!aiJob) return; aiJob.cancelled = true; if(aiJob.abort) aiJob.abort(); }
 
 /* ===== 페이지별 권장시간 ===== */
 document.getElementById('recInput').addEventListener('change', ()=>{
   const v = parseInt(document.getElementById('recInput').value, 10);
   Notes.setTime(currentSlide, v > 0 ? v : 0);   // 0이면 기본값으로 복귀
   recSec = (v > 0) ? v : defaultRec;
+  updatePace();
 });
 
 /* ===== 총 발표 시간 설정 (시작 화면 + 타이머 양쪽) ===== */
@@ -507,7 +672,10 @@ async function toggleDeck(){
 /* ===== 클릭 이동 ===== */
 document.getElementById('script-area').onclick = (e)=>{
   if(coverVisible || editing) return;
-  if(e.target.closest('#toolbar')) return;
+  if(e.target.closest('#toolbar') || e.target.closest('#voiceBar')) return;
+  // 음성 추적 중 단어 클릭 = 그 단어부터 다시 따라가기
+  const w = voiceOn && e.target.closest('.w');
+  if(w){ tracker.setCursorWord(parseInt(w.dataset.wi, 10)); return; }
   const sidebarW = 320;
   if(e.clientX > (window.innerWidth + sidebarW)/2) goSlide(currentSlide+1);
   else goSlide(currentSlide-1);
@@ -528,14 +696,19 @@ function changeFont(d){ scriptFs += d; applyFont(); }
 window.onkeydown = (e)=>{
   if(document.getElementById('bulkPanel').classList.contains('show')){ if(e.key==='Escape') closeBulk(); return; }
   if(document.getElementById('mediaPanel').classList.contains('show')){ if(e.key==='Escape') closeMediaDialog(); return; }
+  if(document.getElementById('allocPanel').classList.contains('show')){ if(e.key==='Escape') closeAlloc(); return; }
   if(editing){ if(e.key==='Escape') commitEdit(); return; }   // 편집 중엔 입력 우선
   if(!document.getElementById('start').classList.contains('hidden')) return;
+  // e.code 도 함께 확인 — 한글 입력 상태에서도 단축키가 동작하도록
   if(e.key==='+' || e.key==='='){ e.preventDefault(); changeFont(3); return; }
   if(e.key==='-' || e.key==='_'){ e.preventDefault(); changeFont(-3); return; }
-  if(e.key==='v' || e.key==='V'){ e.preventDefault(); mediaPlaying ? closeMediaOverlay() : playMedia(); return; }
+  if(e.key==='v' || e.key==='V' || e.code==='KeyV'){ e.preventDefault(); mediaPlaying ? closeMediaOverlay() : playMedia(); return; }
+  if(e.code==='KeyM'){ e.preventDefault(); toggleVoice(); return; }
   if(coverVisible){ if(e.key===' ' || e.key==='Enter'){ e.preventDefault(); coverHide(); } return; }
   if(e.key==='Escape'){ if(mediaPlaying){ closeMediaOverlay(); } else coverShow(); return; }
-  if(e.key==='e' || e.key==='E'){ e.preventDefault(); toggleEdit(); return; }
+  if(e.key==='e' || e.key==='E' || e.code==='KeyE'){ e.preventDefault(); toggleEdit(); return; }
+  if(voiceOn && e.code==='BracketLeft'){ e.preventDefault(); tracker.jumpSentence(-1); return; }
+  if(voiceOn && e.code==='BracketRight'){ e.preventDefault(); tracker.jumpSentence(1); return; }
   if(e.key==='ArrowRight' || e.key===' ' || e.key==='PageDown'){ e.preventDefault(); goSlide(currentSlide+1); }
   if(e.key==='ArrowLeft'  || e.key==='PageUp'){ e.preventDefault(); goSlide(currentSlide-1); }
   if(e.key==='Home') goSlide(0);
@@ -570,7 +743,8 @@ function makeState(){
   const rem = targetSec - diff, ar = Math.abs(rem);
   return { type:'state', idx:currentSlide, total,
     remain:`${rem<0?'-':''}${String(Math.floor(ar/60)).padStart(2,'0')}:${String(ar%60).padStart(2,'0')}`,
-    over: rem<0, covered: coverVisible, note: Notes.get(currentSlide) };
+    over: rem<0, covered: coverVisible, note: Notes.get(currentSlide),
+    pace: (voiceOn && slideW[currentSlide]) ? { read: Math.round(readFrac*100), text: paceView.text, cls: paceView.cls } : null };
 }
 function broadcast(){ host.broadcast(makeState()); }
 function deckBase(){
@@ -594,7 +768,11 @@ function renderQR(elId, url){
 /* ===== 가져오기 ===== */
 document.getElementById('importFile').addEventListener('change', async (e)=>{
   const f = e.target.files[0]; if(!f) return;
-  try{ const n = await Notes.importJSON(f); renderNote(); broadcast(); alert(`${n}개 대본을 가져왔습니다.`); }
+  try{
+    const n = await Notes.importJSON(f);
+    recSec = Notes.getTime(currentSlide) || defaultRec; document.getElementById('recInput').value = recSec;
+    recomputeWeights(); renderNote(); broadcast(); alert(`${n}개 대본을 가져왔습니다.`);
+  }
   catch(err){ alert('가져오기 실패: ' + err.message); }
   e.target.value = '';
 });
@@ -617,12 +795,202 @@ setInterval(()=>{
 
   const slideElapsed = started ? Math.floor((Date.now()-slideEnteredAt)/1000) : 0;
   document.getElementById('bt-pageElapsed').innerText = slideElapsed;
-  const pct = Math.min(100, (slideElapsed/recSec)*100);
-  document.getElementById('paceFill').style.width = pct + '%';
-  document.getElementById('paceBar').classList.toggle('is-over', slideElapsed > recSec);
+  updatePace();
 
   broadcast();
 }, 1000);
+
+/* ===== 음성 추적 (가라오케 하이라이트) ===== */
+const DEFAULT_RATE = 4.3;   // 기본 말하기 속도(음절/초) — 음성 추적을 쓰면 실제 속도로 측정
+const tracker = Voice.createTracker({
+  scrollEl: document.getElementById('script-area'),
+  onProgress: (p)=>{ readFrac = p.frac; updatePace(); },
+  onStatus: (s)=> setVoiceStatus(s),
+  onLang: (lang, mode)=> setVoiceLang(lang, mode),
+  onHeard: (t)=>{ document.getElementById('vbHeard').innerText = t ? '“' + t + '”' : ''; }
+});
+function recomputeWeights(){
+  slideW = [];
+  for(let i=0;i<total;i++) slideW.push(Voice.weightOfText(Notes.plainText(i)));
+}
+function speakRate(){ return tracker.rate() || DEFAULT_RATE; }
+function toggleVoice(){
+  if(!Voice.supported){ alert('이 브라우저는 음성 인식을 지원하지 않습니다.\nChrome · Edge · Safari 로 열어 주세요.'); return; }
+  voiceOn = !voiceOn;
+  if(voiceOn) tracker.start(); else tracker.stop();
+  applyVoiceUI();
+}
+function applyVoiceUI(){
+  document.getElementById('script-area').classList.toggle('voice-on', voiceOn);
+  document.getElementById('voiceBar').classList.toggle('hidden', !voiceOn);
+  const b = document.getElementById('micBtn');
+  b.classList.toggle('active', voiceOn);
+  b.innerText = voiceOn ? '🎙 음성 추적 중' : '🎙 음성 추적';
+  document.getElementById('modeHint').innerText = voiceOn
+    ? '🎙 음성 추적 중 — 단어 클릭: 그 위치부터 · [ ] 앞/뒤 문장 · M 끄기'
+    : 'PDF SYNC — 발표 창·연결된 기기가 함께 넘어갑니다';
+  updatePace();
+}
+const VOICE_STATUS = {
+  starting:'마이크 연결 중…', listening:'듣는 중', off:'꺼짐',
+  network:'인식 서버 연결 중… (음성 인식은 인터넷 필요)', lang:'이 언어는 인식을 지원하지 않습니다',
+  denied:'마이크 권한이 거부됐습니다', nomic:'마이크를 찾을 수 없습니다', unsupported:'이 브라우저는 음성 인식 미지원'
+};
+function setVoiceStatus(s){
+  document.getElementById('vbState').innerText = VOICE_STATUS[s] || s;
+  document.getElementById('vbDot').className = 'vb-dot ' + (s==='listening' ? 'on' : (s==='starting' ? 'wait' : 'bad'));
+  if(voiceOn && (s==='denied' || s==='nomic' || s==='unsupported')){
+    voiceOn = false; applyVoiceUI();
+    alert('🎙 ' + VOICE_STATUS[s] + (s==='denied' ? '\n주소창 왼쪽의 사이트 설정에서 마이크를 ‘허용’으로 바꾼 뒤 다시 눌러 주세요.' : ''));
+  }
+}
+function setVoiceLang(lang, mode){
+  const el = document.getElementById('vbLang');
+  el.innerText = lang==='en-US' ? 'EN 인식' : '한국어 인식';
+  el.classList.toggle('en', lang==='en-US');
+  document.getElementById('vbMode').value = mode;
+}
+document.getElementById('vbMode').addEventListener('change', (e)=>{ tracker.setMode(e.target.value); e.target.blur(); });
+
+/* ===== 진행률 · 페이스 (이 장표 / 전체 일정) ===== */
+function fmtSec(t){ t = Math.round(Math.abs(t)); return `${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`; }
+function allocOf(i){ return Notes.getTime(i) || defaultRec; }
+function setBar(id, f){ document.getElementById(id).style.width = Math.max(0, Math.min(100, f*100)) + '%'; }
+function setStatus(id, text, cls){ const el = document.getElementById(id); el.className = 'pc-status ' + (cls||''); el.innerText = text; }
+function updatePace(){
+  if(!total) return;
+  const slideElapsed = started ? (Date.now()-slideEnteredAt)/1000 : 0;
+  const elapsed = startTs ? (Date.now()-startTs)/1000 : 0;
+  const alloc = recSec || defaultRec;
+  const timeFrac = slideElapsed / alloc;
+  const w = slideW[currentSlide] || 0;
+  const tracking = voiceOn && w > 0;
+
+  // ── 이 장표: 읽은 비율 vs 배정 시간 경과 비율
+  setBar('readFill', tracking ? readFrac : 0);
+  document.getElementById('readPct').innerText = tracking ? Math.round(readFrac*100)+'%' : '–';
+  setBar('paceFill', timeFrac);
+  document.getElementById('timePct').innerText = Math.round(timeFrac*100)+'%';
+  document.getElementById('paceBar').classList.toggle('is-over', timeFrac > 1);
+  let text, cls;
+  if(!w){ text = '이 장표에는 대본이 없습니다'; cls = 'dim'; }
+  else if(!voiceOn){ text = '🎙 음성 추적(M)을 켜면 읽은 분량과 페이스를 알려 드립니다'; cls = 'dim'; }
+  else if(readFrac >= 0.98){ text = '✓ 다 읽었습니다 — 다음 장표로 →'; cls = 'ok'; }
+  else if(!started){ text = '발표를 시작하면 페이스를 계산합니다'; cls = 'dim'; }
+  else if(timeFrac > 1){ text = `⏰ 배정 시간 ${fmtSec(slideElapsed-alloc)} 초과 — 마무리하세요`; cls = 'over'; }
+  else if(slideElapsed < 5){ text = '● 페이스 측정 중…'; cls = 'dim'; }
+  else {
+    const d = readFrac - timeFrac;   // + 면 시간 대비 많이 읽음(빠름)
+    if(d <= -0.12){ text = `▼ 늦음 — 약 ${Math.round(-d*alloc)}초 분량 뒤처짐`; cls = 'late'; }
+    else if(d >= 0.15){ text = `▲ 빠름 — 약 ${Math.round(d*alloc)}초 분량 앞섬, 천천히`; cls = 'fast'; }
+    else { text = '● 적정 페이스'; cls = 'ok'; }
+  }
+  let sub = '';
+  if(w){
+    sub = (tracking && started && readFrac > 0.1 && readFrac < 0.98 && slideElapsed >= 5)
+      ? `이 속도면 ${fmtSec(slideElapsed/readFrac)} 걸림 / 배정 ${fmtSec(alloc)}`
+      : `남은 대본 약 ${fmtSec(w*(1-(tracking?readFrac:0))/speakRate())} / 배정 ${fmtSec(alloc)}`;
+  }
+  setStatus('paceStatus', text, cls);
+  document.getElementById('paceSub').innerText = sub;
+  paceView.text = text; paceView.cls = cls;
+
+  // ── 전체 일정: 대본 진행률 vs 시간 경과, 계획(장표별 배정 합) 대비 앞섬/늦음
+  const sumW = slideW.reduce((a,b)=>a+b, 0);
+  const beforeW = slideW.slice(0, currentSlide).reduce((a,b)=>a+b, 0);
+  const allRead = sumW ? (beforeW + (tracking ? w*readFrac : 0)) / sumW : currentSlide/total;
+  setBar('allReadFill', allRead);
+  document.getElementById('allReadPct').innerText = Math.round(allRead*100)+'%';
+  setBar('allTimeFill', elapsed/targetSec);
+  document.getElementById('allTimePct').innerText = Math.round(elapsed/targetSec*100)+'%';
+  document.getElementById('allTimeBar').classList.toggle('is-over', elapsed > targetSec);
+
+  let planBefore = 0, planAfter = 0, planAll = 0;
+  for(let i=0;i<total;i++){ const a = allocOf(i); planAll += a; if(i<currentSlide) planBefore += a; else if(i>currentSlide) planAfter += a; }
+  if(!started){
+    const diff = planAll - targetSec;
+    setStatus('schedStatus', '발표 시작 전', 'dim');
+    document.getElementById('schedSub').innerText = `배정 합계 ${fmtSec(planAll)} / 목표 ${fmtSec(targetSec)}`
+      + (Math.abs(diff) >= 15 ? ` (${fmtSec(diff)} ${diff>0?'초과':'남음'})` : '');
+    return;
+  }
+  const curFrac = tracking ? readFrac : Math.min(1, timeFrac);
+  const delta = elapsed - (planBefore + curFrac*alloc);   // + 면 계획보다 늦음
+  if(delta > 10) setStatus('schedStatus', `▼ 일정보다 ${fmtSec(delta)} 늦음`, delta > 60 ? 'over' : 'late');
+  else if(delta < -10) setStatus('schedStatus', `▲ 일정보다 ${fmtSec(delta)} 여유`, 'fast');
+  else setStatus('schedStatus', '● 일정대로 진행 중', 'ok');
+  const remainCur = tracking ? w*(1-readFrac)/speakRate() : Math.max(0, alloc - slideElapsed);
+  const finish = elapsed + remainCur + planAfter;
+  document.getElementById('schedSub').innerText = `예상 종료 ${fmtSec(finish)} / 목표 ${fmtSec(targetSec)}`
+    + (finish - targetSec > 15 ? ` · ${fmtSec(finish-targetSec)} 초과 예상` : '');
+}
+
+/* ===== 장표별 시간 배분 ===== */
+function esc(s){ return String(s).replace(/[&<>"]/g, (c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function openAlloc(){
+  if(!total) return;
+  recomputeWeights(); renderAlloc();
+  document.getElementById('allocMsg').innerText = '';
+  document.getElementById('allocPanel').classList.add('show');
+}
+function closeAlloc(){ document.getElementById('allocPanel').classList.remove('show'); }
+function renderAlloc(){
+  const rate = speakRate(), rows = [];
+  for(let i=0;i<total;i++){
+    const t = Notes.getTime(i), a = t || defaultRec, w = slideW[i] || 0, read = w/rate;
+    const cls = !w ? 'al-dim' : (read > a*1.15 ? 'al-over' : (read < a*0.6 ? 'al-short' : 'al-fit'));
+    const prev = Notes.plainText(i).replace(/\s+/g,' ').slice(0, 60) || '(대본 없음)';
+    rows.push(`<tr class="${i===currentSlide?'cur':''}"><td>${i+1}</td><td class="al-prev" title="${esc(prev)}">${esc(prev)}</td>`
+      + `<td>${w?Math.round(w):'–'}</td><td class="${cls}">${w?fmtSec(read):'–'}</td>`
+      + `<td><input type="number" min="0" step="5" data-i="${i}" value="${t||''}" placeholder="${defaultRec}"></td></tr>`);
+  }
+  document.getElementById('allocBody').innerHTML = rows.join('');
+  renderAllocSummary();
+}
+function renderAllocSummary(){
+  let sum = 0; for(let i=0;i<total;i++) sum += allocOf(i);
+  const diff = sum - targetSec, fits = Math.abs(diff) < 15;
+  const readAll = slideW.reduce((a,b)=>a+b, 0) / speakRate();
+  const ratio = readAll / targetSec;
+  document.getElementById('allocSummary').innerHTML =
+    `총 발표 시간 <b>${fmtSec(targetSec)}</b> · 배정 합계 <b class="${fits?'al-fit':(diff>0?'al-over':'al-short')}">${fmtSec(sum)}</b>`
+    + (fits ? ' (목표와 일치)' : ` (목표보다 ${fmtSec(diff)} ${diff>0?'김':'짧음'})`)
+    + `<br>대본 전체 예상 낭독 <b class="${ratio>1.1?'al-over':(ratio<0.7?'al-short':'al-fit')}">${fmtSec(readAll)}</b>`
+    + (ratio > 1.1 ? ' — 대본이 목표 시간보다 깁니다. 줄이거나 빠르게 말해야 합니다.' : (ratio < 0.7 ? ' — 대본이 목표 시간보다 많이 짧습니다. 설명을 보태거나 시간을 줄이세요.' : ''))
+    + ` · 말하기 속도 <b>분당 약 ${Math.round(speakRate()*60)}음절</b> `
+    + (tracker.rate() ? '(내 목소리로 측정)' : '(기본값 — 음성 추적을 쓰면 실제 속도로 바뀝니다)');
+}
+document.getElementById('allocBody').addEventListener('change', (e)=>{
+  const inp = e.target.closest('input[data-i]'); if(!inp) return;
+  const v = parseInt(inp.value, 10);
+  Notes.setTime(parseInt(inp.dataset.i, 10), v > 0 ? v : 0);
+  afterAllocChange(false);
+});
+function afterAllocChange(rerender){
+  recSec = Notes.getTime(currentSlide) || defaultRec;
+  document.getElementById('recInput').value = recSec;
+  if(rerender) renderAlloc(); else renderAllocSummary();
+  updatePace();
+}
+function allocProportional(){
+  recomputeWeights();
+  const sumW = slideW.reduce((a,b)=>a+b, 0);
+  if(!sumW){ document.getElementById('allocMsg').innerText = '대본이 없어 분량에 맞춘 배분을 할 수 없습니다.'; return; }
+  const floorW = sumW/total*0.25;                    // 대본이 없거나 짧은 장표도 최소 시간은 받게
+  const ws = slideW.map((w)=>Math.max(w, floorW));
+  const sw = ws.reduce((a,b)=>a+b, 0);
+  const secs = ws.map((w)=>Math.max(5, Math.round(targetSec*w/sw/5)*5));
+  const k = secs.indexOf(Math.max(...secs));
+  secs[k] = Math.max(5, secs[k] + targetSec - secs.reduce((a,b)=>a+b, 0));   // 반올림 오차 보정
+  secs.forEach((s,i)=>Notes.setTime(i, s));
+  afterAllocChange(true);
+  document.getElementById('allocMsg').innerText = '대본 분량에 맞춰 총 발표 시간을 나눴습니다.';
+}
+function allocClear(){
+  for(let i=0;i<total;i++) Notes.setTime(i, 0);
+  afterAllocChange(true);
+  document.getElementById('allocMsg').innerText = `모든 장표를 균등 배분(${defaultRec}초)으로 되돌렸습니다.`;
+}
 
 /* ===== 확장 디스플레이 감지 ===== */
 function detectScreens(){
@@ -644,6 +1012,8 @@ function applyCover(){
 }
 async function init(){
   applyFont(); detectScreens(); applyCover();
+  setVoiceLang(tracker.getLang(), tracker.getMode());
+  if(!Voice.supported) document.getElementById('micBtn').title = '이 브라우저는 음성 인식을 지원하지 않습니다 (Chrome·Edge·Safari 사용)';
   setTotalMin(Math.round(targetSec/60));     // 저장된 총 발표 시간으로 입력칸 채움
   const ok = await PdfRender.loadStored();   // 저장된 PDF 있으면 자동 로드
   if(ok){
