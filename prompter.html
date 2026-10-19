@@ -925,7 +925,10 @@ window.onkeydown = (e)=>{
 /* ===== 동기화 호스트 ===== */
 const host = Sync.createHost({
   onCommand: (cmd, d)=>{
-    if(cmd==='goto'){ if(d.idx !== currentSlide) goSlide(d.idx); }
+    // 덱 페이지가 장을 넘길 때 보내는 goto 는 PDF 모드에서만 따른다. HTML 모드는 프롬프터가 덱을 직접
+    // 움직이고(htmlGo) 그 덱이 다시 goto 를 보내므로, 늦게 온 goto 를 따르면 두 장 사이를 끝없이 오간다.
+    // HTML 모드의 현재 장은 기준 창을 읽는 폴링이 맡는다.
+    if(cmd==='goto'){ if(!htmlDeck && d.idx !== currentSlide) goSlide(d.idx); }
     else if(cmd==='next') stepSlide(1);
     else if(cmd==='prev') stepSlide(-1);
     else if(cmd==='first') goSlide(0);
