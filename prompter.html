@@ -789,8 +789,9 @@ window.onkeydown = (e)=>{
 
 /* ===== 동기화 호스트 ===== */
 const host = Sync.createHost({
-  onCommand: (cmd)=>{
-    if(cmd==='next') goSlide(currentSlide+1);
+  onCommand: (cmd, d)=>{
+    if(cmd==='goto') goSlide(d.idx);
+    else if(cmd==='next') goSlide(currentSlide+1);
     else if(cmd==='prev') goSlide(currentSlide-1);
     else if(cmd==='first') goSlide(0);
     else if(cmd==='toggleCover') (coverVisible ? coverHide() : coverShow());
@@ -1087,11 +1088,34 @@ async function init(){
   setVoiceLang(tracker.getLang(), tracker.getMode());
   if(!Voice.supported) document.getElementById('micBtn').title = '이 브라우저는 음성 인식을 지원하지 않습니다 (Chrome·Edge·Safari 사용)';
   setTotalMin(Math.round(targetSec/60));     // 저장된 총 발표 시간으로 입력칸 채움
+  const preset = new URLSearchParams(location.search).get('preset');
+  if(preset && /^[\w-]+$/.test(preset)){ await loadPreset(preset); return; }
   const ok = await PdfRender.loadStored();   // 저장된 PDF 있으면 자동 로드
   if(ok){
     total = PdfRender.pageCount();
     afterPdfLoaded();
     hideStart();
+  }
+}
+/* ?preset=<id> → presets/<id>/preset.json 의 PDF·대본·시간을 미리 넣은 채로 시작.
+   이미 이 발표에 고친 대본이 있으면 덮어쓰지 않는다. */
+async function loadPreset(id){
+  const base = `presets/${id}/`;
+  try{
+    const p = await (await fetch(base + 'preset.json', { cache:'no-store' })).json();
+    total = await PdfRender.loadPdf(base + p.pdf, (p.title || id) + '.pdf');
+    Notes.setDeck('preset-' + id);
+    if(p.title) document.getElementById('cvTitle').innerText = p.title;
+    if([...Array(total).keys()].every((i)=> Notes.isEmpty(i))){
+      await Notes.importJSON(JSON.stringify(p));
+      if(p.targetMin) setTotalMin(p.targetMin);
+    }
+    afterPdfLoaded();
+    const slide = +new URLSearchParams(location.search).get('slide');
+    if(slide > 1) goSlide(slide - 1);
+    hideStart();
+  }catch(e){
+    alert('준비된 발표를 불러오지 못했습니다: ' + e.message);
   }
 }
 window.onload = init;

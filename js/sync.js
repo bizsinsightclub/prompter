@@ -27,6 +27,8 @@
         if (lastSlide) bc.postMessage(lastSlide);
         if (lastState) bc.postMessage(lastState);
       }
+      // 같은 주소(github.io)의 HTML 덱이 장을 넘길 때 보내는 {cmd:'goto', idx}
+      else if (e.data && e.data.cmd && opts.onCommand) opts.onCommand(e.data.cmd, e.data);
     };
 
     function startPeer() {
