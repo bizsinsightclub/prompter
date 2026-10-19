@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>프롬프터 · PDF 텔레프롬프터</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+KR:wght@300;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <link rel="stylesheet" href="css/app.css">
@@ -14,31 +14,56 @@
 <!-- ===== 시작 화면: PDF 입력 ===== -->
 <div id="start">
   <div class="s-eyebrow">PDF TELEPROMPTER</div>
-  <h1 id="startTitle">프롬프터용 PDF를 불러오세요</h1>
-  <p>발표 슬라이드 PDF를 선택하면 각 페이지를 이미지로 변환해 페이지별로 편성합니다. 대본은 비어 있는 상태에서 시작합니다.</p>
+  <h1 id="startTitle">발표 슬라이드를 불러오세요</h1>
+  <p><b>PDF</b>는 페이지를 이미지로 바꿔 띄우고, <b>HTML 덱</b>은 덱 페이지를 그대로 띄워 모션·애니메이션이 살아 있습니다. HTML 덱에 발표자 노트가 있으면 대본으로 가져옵니다.</p>
   <div id="dropzone">
     <div class="dz-icon">📄</div>
-    <div class="dz-main">여기에 PDF를 끌어다 놓거나 클릭해 선택</div>
-    <div class="dz-sub">불러온 PDF는 이 브라우저에 저장되어 다음에 다시 열립니다</div>
+    <div class="dz-main">PDF 또는 HTML 덱 파일을 끌어다 놓거나 클릭해 선택</div>
+    <div class="dz-sub">불러온 파일은 이 브라우저에 저장되어 다음에 다시 열립니다</div>
   </div>
-  <input type="file" id="pdfFile" accept="application/pdf" style="display:none;">
+  <input type="file" id="pdfFile" accept="application/pdf,.html,.htm" style="display:none;">
+  <div class="src-html">
+    <input id="htmlUrl" type="url" placeholder="또는 HTML 덱 주소 — 예: https://bizsinsightclub.github.io/tesladeck1019/" onkeydown="if(event.key==='Enter') openHtmlUrl()">
+    <button class="btn" onclick="openHtmlUrl()">HTML 덱 열기</button>
+  </div>
   <div class="total-set">⏱ 총 발표 시간 <input id="totalMinStart" type="number" min="1" max="600" value="18"> 분 <span class="rec-hint">(언제든 변경 가능)</span></div>
   <div class="s-hint">팁 — 폰·다른 기기 연결까지 쓰려면 정적 서버(localhost) 또는 HTTPS로 여세요</div>
 </div>
 
 <header>
   <div class="time-box">
-    <div>CLOCK<b id="clock">00:00:00</b></div>
-    <div>RUNNING<b id="elapsed">00:00:00</b></div>
+    <div>현재<b id="clock">00:00:00</b></div>
+    <div>경과<b id="elapsed">00:00:00</b></div>
+    <div class="status-tag" id="statusTag">STANDBY</div>
+    <div class="status-tag" id="screenTag" title="감지된 디스플레이">화면 ?</div>
   </div>
   <div class="head-right">
-    <div class="status-tag" id="screenTag" title="감지된 디스플레이">화면 ?</div>
-    <div class="status-tag" id="statusTag">STANDBY</div>
-    <button class="btn" onclick="showStart()">📄 PDF 교체</button>
-    <button class="btn" onclick="openBulk()">⤵ 대본 일괄 입력</button>
-    <button class="btn" id="remoteBtn" onclick="toggleRemote()">🔗 기기 연결</button>
-    <button class="btn" id="micBtn" onclick="toggleVoice()" title="마이크로 읽은 위치를 따라가며 하이라이트 (M)">🎙 음성 추적</button>
-    <button class="btn" id="coverBtn" onclick="coverShow()">가림 (Esc)</button>
+    <!-- 준비 메뉴: 발표 전에 쓰는 기능 모음 -->
+    <div class="prep">
+      <button class="btn q" id="prepBtn" onclick="togglePrep(event)" aria-haspopup="true" aria-expanded="false">준비 ▾</button>
+      <div class="prep-menu hidden" id="prepMenu">
+        <button onclick="showStart()">슬라이드 교체 (PDF · HTML)</button>
+        <button onclick="openBulk()">대본 일괄 입력 · AI 생성</button>
+        <button id="remoteBtn" onclick="toggleRemote()">기기 연결 (QR · 3자리)</button>
+        <hr>
+        <button id="editBtn" onclick="toggleEdit()">대본 편집<kbd>E</kbd></button>
+        <button onclick="openMediaDialog()">이 페이지에 영상 첨부</button>
+        <hr>
+        <button onclick="Notes.exportJSON()">대본 내보내기 (파일 저장)</button>
+        <button onclick="document.getElementById('importFile').click()">대본 가져오기</button>
+        <hr>
+        <div class="prep-keys">
+          <div><b>→ Space</b> 다음 · <b>←</b> 이전</div>
+          <div><b>Home End</b> 처음 · 끝으로</div>
+          <div><b>M</b> 음성 추적 · <b>[ ]</b> 앞/뒤 문장</div>
+          <div><b>E</b> 편집 · <b>V</b> 영상 · <b>+ −</b> 글자 크기</div>
+          <div><b>Esc</b> 화면 가림 · 영상 닫기</div>
+        </div>
+      </div>
+    </div>
+    <span class="head-sep"></span>
+    <button class="btn" id="micBtn" onclick="toggleVoice()" title="마이크로 읽은 위치를 따라가며 하이라이트 (M)">🎙 음성 추적<kbd>M</kbd></button>
+    <button class="btn" id="coverBtn" onclick="coverShow()">가림<kbd>Esc</kbd></button>
     <button class="btn primary" id="deckBtn" onclick="toggleDeck()">프로젝터에 슬라이드 띄우기</button>
   </div>
 </header>
@@ -192,27 +217,28 @@
 
 <div id="main">
   <div id="sidebar">
-    <div class="thumb-container">
-      <img id="thumb" alt="현재 슬라이드" style="display:none;">
-      <span class="ph" id="thumbPh">—</span>
-    </div>
-    <div class="slide-meta">
-      <div class="slide-num"><span id="s-num">01</span><span class="total"> / <span id="s-total">–</span></span></div>
-      <div class="slide-file" id="s-file" title="마운트된 PDF">—</div>
+    <div class="sb-pn">
+      <div class="thumb-container">
+        <img id="thumb" alt="현재 슬라이드" style="display:none;">
+        <span class="ph" id="thumbPh">—</span>
+      </div>
+      <div class="slide-meta">
+        <div class="slide-num"><span id="s-num">01</span><span class="total"> / <span id="s-total">–</span></span></div>
+        <div class="slide-file" id="s-file" title="마운트된 PDF">—</div>
+      </div>
     </div>
 
-    <div class="big-timer" id="bigTimer">
-      <div class="bt-cap">남은 시간</div>
+    <div class="sb-pn big-timer" id="bigTimer">
+      <div class="pn-h">남은 시간 <span class="target-set">총 <input id="totalMin" type="number" min="1" max="600" value="18" title="총 발표 시간(분)"> 분</span></div>
       <div class="bt-remain" id="bt-remain">18:00</div>
-      <div class="bt-row">
-        <div class="bt-page">이 페이지 <b id="bt-pageElapsed">0</b>초</div>
-        <div class="bt-elapsed" id="bt-total" title="총 경과">00:00</div>
+      <div class="bt-cells">
+        <div>이 장표<b><span id="bt-pageElapsed">0</span><small>초</small></b></div>
+        <div>총 경과<b id="bt-total">00:00</b></div>
       </div>
-      <div class="target-set">총 발표 시간 <input id="totalMin" type="number" min="1" max="600" value="18"> 분</div>
     </div>
 
     <!-- 이 장표: 배정 시간 · 읽은 분량 · 페이스 -->
-    <div class="pace-card">
+    <div class="sb-pn pace-card">
       <div class="pc-head">
         <span class="pc-cap">이 장표</span>
         <span class="pc-alloc">배정 <input id="recInput" type="number" min="5" step="5" value="40" title="이 장표에 배정한 시간(초) — 저장됨"> 초</span>
@@ -223,7 +249,7 @@
       <div class="pc-sub" id="paceSub"></div>
     </div>
     <!-- 전체 일정 -->
-    <div class="pace-card">
+    <div class="sb-pn pace-card">
       <div class="pc-head">
         <span class="pc-cap">전체 일정</span>
         <button class="pc-link" onclick="openAlloc()">⏱ 시간 배분표</button>
@@ -234,32 +260,10 @@
       <div class="pc-sub" id="schedSub"></div>
     </div>
 
-    <div class="media-box">
-      <div class="media-state" id="mediaState">이 페이지 영상 없음</div>
-      <div class="notes-tools">
-        <button class="btn" id="playMediaBtn" onclick="playMedia()" disabled>▶ 영상 (V)</button>
-        <button class="btn" onclick="openMediaDialog()">🎬 영상 첨부</button>
-      </div>
-    </div>
-
-    <div class="notes-tools">
-      <button class="btn" onclick="toggleEdit()" id="editBtn">✎ 편집 (E)</button>
-    </div>
-    <div class="notes-tools">
-      <button class="btn" onclick="Notes.exportJSON()">↓ 내보내기</button>
-      <button class="btn" onclick="document.getElementById('importFile').click()">↑ 가져오기</button>
-    </div>
     <input type="file" id="importFile" accept="application/json" style="display:none;">
-
-    <div class="mini-list">
-      <div><b>①</b> 이 창은 연단 모니터에</div>
-      <div><b>②</b> ‘프로젝터에 띄우기’ → deck 창(코드 없이 자동)</div>
-      <div><b>③</b> 다른 기기 deck 는 3자리 코드 입력</div>
-      <div style="margin-top:8px;"><b>→/Space</b> 다음 · <b>←</b> 이전 · <b>E</b> 편집</div>
-      <div><b>M</b> 음성 추적 · <b>[ ]</b> 앞/뒤 문장으로</div>
-    </div>
   </div>
 
+  <div id="script-col">
   <div id="script-area">
     <div id="voiceBar" class="hidden">
       <span class="vb-dot" id="vbDot"></span>
@@ -303,15 +307,24 @@
       <div class="cv-hint">클릭 · Space · Enter 로 시작 — 프로젝터 슬라이드도 함께 켜집니다 &nbsp;|&nbsp; 발표 중 Esc 로 다시 가림</div>
     </div>
   </div>
-</div>
-
-<div class="hint" id="modeHint">PDF SYNC — 발표 창·연결된 기기가 함께 넘어갑니다</div>
-<div class="nav-guide">
-  <button class="nav-btn" onclick="changeFont(-3)" title="글자 작게 ( - )">A−</button>
-  <span id="fsLabel" class="fs-label">42px</span>
-  <button class="nav-btn" onclick="changeFont(3)" title="글자 크게 ( + )">A+</button>
-  <button class="nav-btn" onclick="goSlide(currentSlide-1)" style="margin-left:8px;">◀ PREV</button>
-  <button class="nav-btn" onclick="goSlide(currentSlide+1)">NEXT ▶</button>
+  <div id="script-foot">
+    <div class="hint" id="modeHint">발표 창과 연결된 기기가 함께 넘어갑니다</div>
+    <div class="nav-guide">
+      <!-- 이 장표에 영상이 있을 때만 보임 -->
+      <div class="media-ctl">
+        <span class="media-state" id="mediaState">이 페이지 영상 없음</span>
+        <button class="nav-btn" id="playMediaBtn" onclick="playMedia()" disabled>▶ 영상 재생<kbd>V</kbd></button>
+        <span class="nav-sep"></span>
+      </div>
+      <button class="nav-btn" onclick="changeFont(-3)" title="글자 작게 ( - )">가−</button>
+      <span id="fsLabel" class="fs-label">42px</span>
+      <button class="nav-btn" onclick="changeFont(3)" title="글자 크게 ( + )">가+</button>
+      <span class="nav-sep"></span>
+      <button class="nav-btn big" onclick="stepSlide(-1)">◀ 이전</button>
+      <button class="nav-btn big" onclick="stepSlide(1)">다음 ▶</button>
+    </div>
+  </div>
+  </div>
 </div>
 
 <script src="js/config.js"></script>
@@ -351,9 +364,12 @@ function hideStart(){ document.getElementById('start').classList.add('hidden'); 
 
 async function handlePdf(file){
   if(!file) return;
+  if(/\.html?$/i.test(file.name)) return handleHtmlFile(file);
   document.getElementById('thumbPh').innerText = '변환 중…';
   try{
     total = await PdfRender.loadPdf(file, file.name);
+    if(htmlDeck) clearHtmlDeck();
+    try{ localStorage.removeItem('slideSrc'); }catch(e){}
     Notes.setDeck(file.name.replace(/\.pdf$/i,''));
     afterPdfLoaded();
     hideStart();
@@ -364,10 +380,87 @@ async function handlePdf(file){
 function afterPdfLoaded(){
   document.getElementById('s-total').innerText = total || '–';
   defaultRec = total ? Math.max(15, Math.round(targetSec/total)) : 40;
-  document.getElementById('s-file').innerText = PdfRender.name() || '—';
+  document.getElementById('s-file').innerText = (htmlDeck ? htmlDeck.name : PdfRender.name()) || '—';
   currentSlide = 0;
   recomputeWeights();
-  goSlide(0);
+  goSlide(htmlDeck ? Math.max(0, deckCur(deckWins()[0])) : 0);   // HTML 덱은 덱이 지금 보고 있는 장에서 시작
+}
+
+/* ===== HTML 덱 모드 — 덱 페이지를 그대로 띄우고(모션 유지), 이동·키를 프롬프터가 대신 눌러 준다.
+   프롬프터와 같은 사이트(origin)에 있거나 파일로 불러온 덱만 조종할 수 있다.
+   덱 규약(web-slide-deck): section.slide 중 .on 이 현재 장 · data-note 발표자 노트 · window.go(n) ===== */
+let htmlDeck = null;              // { url, name, frame }
+let pendingDeckSync = false;      // 새로 연 발표 창이 뜨면 현재 장으로 맞춤
+function deckSlides(w){ try{ return [...w.document.querySelectorAll('section.slide')]; }catch(e){ return []; } }
+function deckCur(w){ return deckSlides(w).findIndex((s)=> s.classList.contains('on')); }   // 0부터, 없으면 -1
+function deckWins(){   // 첫 번째가 기준 창: 발표 창이 있으면 그것, 없으면 미리보기
+  return [deckWin && !deckWin.closed ? deckWin : null, htmlDeck && htmlDeck.frame.contentWindow].filter(Boolean);
+}
+function htmlGo(idx){ deckWins().forEach((w)=>{ try{ if(deckCur(w) >= 0 && deckCur(w) !== idx) w.go(idx+1); }catch(e){} }); }
+function htmlKey(key){   // 덱이 직접 받은 것처럼 키를 보낸다 → 모션 비트가 남았으면 비트, 아니면 다음 장
+  deckWins().forEach((w)=>{ try{ w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key, bubbles:true })); }catch(e){} });
+  host.sendMedia({ type:'key', key });   // 연단(deck.html) 쪽 덱에도 같은 키 (sendMedia = 연단 전용 전송)
+}
+function stepSlide(d){ if(htmlDeck) htmlKey(d > 0 ? 'ArrowRight' : 'ArrowLeft'); else goSlide(currentSlide + d); }
+setInterval(()=>{   // 덱에서 직접 넘긴 것(클리커·덱 화면 클릭)도 따라간다
+  if(!htmlDeck) return;
+  const w = deckWins()[0], i = deckCur(w);
+  if(i < 0) return;
+  if(pendingDeckSync && w === deckWin){ pendingDeckSync = false; htmlGo(currentSlide); return; }
+  if(i !== currentSlide) goSlide(i);
+}, 200);
+function sameDeck(w, url){
+  try{ return w.location.origin === location.origin && w.location.pathname === new URL(url, location.href).pathname; }
+  catch(e){ return false; }
+}
+async function loadHtmlDeck(url, name){
+  clearHtmlDeck();
+  const frame = document.createElement('iframe');
+  frame.tabIndex = -1; frame.src = url;   // 미리보기 — 덱 페이지를 그대로 축소(조작은 프롬프터에서)
+  frame.style.cssText = 'width:100%;height:100%;border:0;pointer-events:none;background:#000';
+  document.querySelector('.thumb-container').appendChild(frame);
+  await new Promise((res)=>{ frame.onload = res; });
+  const w = frame.contentWindow, slides = deckSlides(w);
+  if(!slides.length){
+    frame.remove();
+    throw new Error('슬라이드를 찾지 못했습니다. 프롬프터와 같은 사이트에 올린 덱이거나 .html 파일이어야 합니다.');
+  }
+  const st = w.document.createElement('style');   // 미리보기엔 덱의 메뉴·노트를 숨기고 슬라이드만
+  st.textContent = '#bar,#prog,#notes,#outline,#tip{display:none!important}#stage{inset:0!important}';
+  w.document.head.appendChild(st); w.dispatchEvent(new w.Event('resize'));
+  document.getElementById('thumb').style.display = 'none';
+  document.getElementById('thumbPh').style.display = 'none';
+  htmlDeck = { url, name, frame };
+  total = slides.length;
+  // 덱의 '발표자 노트' 버튼으로 열렸으면 그 탭이 곧 발표 창
+  if(window.opener && sameDeck(window.opener, url)){ deckWin = window.opener; document.getElementById('deckBtn').innerText = '발표 창 (덱 탭)'; }
+  return slides;
+}
+function clearHtmlDeck(){   // 발표 창은 PDF용(deck.html)·HTML용이 서로 달라서 모드를 바꾸면 닫는다
+  if(deckWin && !deckWin.closed && deckWin !== window.opener) toggleDeck();
+  deckWin = null;
+  if(htmlDeck){ htmlDeck.frame.remove(); htmlDeck = null; }
+}
+async function openHtml(url, name){
+  try{
+    const slides = await loadHtmlDeck(url, name);
+    Notes.setDeck('html-' + name.replace(/\.html?$/i, ''));
+    if(slides.every((s, i)=> Notes.isEmpty(i)))   // 덱에 적힌 발표자 노트를 대본으로
+      slides.forEach((s, i)=>{ if(s.dataset.note) Notes.set(i, esc(s.dataset.note).replace(/\n/g, '<br>')); });
+    afterPdfLoaded();
+    hideStart();
+    return true;
+  }catch(e){ alert('HTML 덱을 불러오지 못했습니다: ' + e.message); return false; }
+}
+function openHtmlUrl(){
+  const url = document.getElementById('htmlUrl').value.trim();
+  if(!url) return;
+  const name = decodeURIComponent(new URL(url, location.href).pathname.split('/').filter(Boolean).pop() || 'html');
+  openHtml(url, name).then((ok)=>{ if(ok) try{ localStorage.setItem('slideSrc', 'url:' + url); }catch(e){} });
+}
+async function handleHtmlFile(file){
+  await PdfRender.saveMedia('htmldeck', file);
+  if(await openHtml(URL.createObjectURL(file), file.name)) try{ localStorage.setItem('slideSrc', 'file:' + file.name); }catch(e){}
 }
 
 const dz = document.getElementById('dropzone');
@@ -376,7 +469,7 @@ dz.onclick = ()=> pdfInput.click();
 pdfInput.onchange = (e)=>{ handlePdf(e.target.files[0]); e.target.value=''; };
 ['dragenter','dragover'].forEach(ev=> dz.addEventListener(ev, (e)=>{ e.preventDefault(); dz.classList.add('drag'); }));
 ['dragleave','drop'].forEach(ev=> dz.addEventListener(ev, (e)=>{ e.preventDefault(); dz.classList.remove('drag'); }));
-dz.addEventListener('drop', (e)=>{ const f=[...(e.dataTransfer.files||[])].find(f=>/pdf$/i.test(f.type)||/\.pdf$/i.test(f.name)); if(f) handlePdf(f); });
+dz.addEventListener('drop', (e)=>{ const f=[...(e.dataTransfer.files||[])].find(f=>/pdf$/i.test(f.type)||/\.(pdf|html?)$/i.test(f.name)); if(f) handlePdf(f); });
 
 /* ===== 가림막 ===== */
 function coverShow(){
@@ -409,8 +502,9 @@ async function goSlide(idx, isExternal=false){
   document.getElementById('recInput').value = recSec;
   renderNote();
   updateMediaUI();
-  await renderThumb(idx);
-  pushSlideImage(idx);   // 연단(deck)으로 페이지 이미지 전송
+  if(htmlDeck) htmlGo(idx);   // HTML 덱: 발표 창·미리보기를 그 장으로
+  else await renderThumb(idx);
+  pushSlideImage(idx);   // 연단(deck.html)으로 — PDF는 페이지 이미지, HTML 덱은 덱 주소와 장 번호
   broadcast();
 }
 async function renderThumb(idx){
@@ -422,6 +516,7 @@ async function renderThumb(idx){
   }catch(e){}
 }
 async function pushSlideImage(idx){
+  if(htmlDeck){ host.sendSlide({ type:'slide', idx, total, html: new URL(htmlDeck.url, location.href).href }); return; }
   try{
     const image = await PdfRender.renderPageDataURL(idx, CFG.deckImageWidth, { type:CFG.deckImageType, quality:CFG.deckImageQuality });
     host.sendSlide({ type:'slide', idx, total, image });
@@ -499,6 +594,7 @@ let _savedRange = null;
 /* ===== 일괄 입력 ===== */
 let slideTexts = null;   // 슬라이드별 추출 글자(프롬프트용, 패널 열 때 미리 준비)
 async function prefetchSlideTexts(){
+  if(htmlDeck) return (slideTexts = deckSlides(htmlDeck.frame.contentWindow).map((s)=> s.textContent.replace(/\s+/g,' ').trim().slice(0,800)));
   if(!PdfRender.isLoaded()) return null;
   const out = [];
   for(let i=0;i<total;i++) out.push(await PdfRender.pageText(i, 800));
@@ -726,13 +822,14 @@ async function toggleDeck(){
       const target = sd.screens.find(s => s.left !== cur.left || s.top !== cur.top) || cur;
       document.getElementById('screenTag').innerText = '화면 ' + sd.screens.length;
       const feat = `left=${target.availLeft},top=${target.availTop},width=${target.availWidth},height=${target.availHeight}`;
-      deckWin = window.open('deck.html', 'prompter_deck', feat);
+      deckWin = window.open(htmlDeck ? htmlDeck.url : 'deck.html', 'prompter_deck', feat);
       try{ deckWin.moveTo(target.availLeft, target.availTop); deckWin.resizeTo(target.availWidth, target.availHeight); }catch(e){}
       try{ deckWin.focus(); }catch(e){}
       placed = (target !== cur);
     }
   }catch(e){}
-  if(!deckWin){ deckWin = window.open('deck.html', 'prompter_deck', 'width=1280,height=720'); }
+  if(!deckWin){ deckWin = window.open(htmlDeck ? htmlDeck.url : 'deck.html', 'prompter_deck', 'width=1280,height=720'); }
+  pendingDeckSync = !!htmlDeck;
   btn.classList.add('linked'); btn.innerText = '발표 창 닫기';
   status.innerText = placed ? 'LIVE — 프로젝터' : 'LIVE — 창 이동 필요';
   document.getElementById('modeHint').innerText = placed
@@ -748,9 +845,8 @@ document.getElementById('script-area').onclick = (e)=>{
   // 음성 추적 중 단어 클릭 = 그 단어부터 다시 따라가기
   const w = voiceOn && e.target.closest('.w');
   if(w){ tracker.setCursorWord(parseInt(w.dataset.wi, 10)); return; }
-  const sidebarW = 320;
-  if(e.clientX > (window.innerWidth + sidebarW)/2) goSlide(currentSlide+1);
-  else goSlide(currentSlide-1);
+  const r = e.currentTarget.getBoundingClientRect();   // 사이드바 폭과 무관하게 대본 영역 가운데 기준
+  stepSlide(e.clientX > r.left + r.width/2 ? 1 : -1);
 };
 
 /* ===== 글자 크기 ===== */
@@ -766,6 +862,7 @@ function changeFont(d){ scriptFs += d; applyFont(); }
 
 /* ===== 키보드 ===== */
 window.onkeydown = (e)=>{
+  if(prepOpen()){ if(e.key==='Escape'){ e.preventDefault(); closePrep(); return; } }
   if(document.getElementById('bulkPanel').classList.contains('show')){ if(e.key==='Escape') closeBulk(); return; }
   if(document.getElementById('mediaPanel').classList.contains('show')){ if(e.key==='Escape') closeMediaDialog(); return; }
   if(document.getElementById('allocPanel').classList.contains('show')){ if(e.key==='Escape') closeAlloc(); return; }
@@ -781,8 +878,8 @@ window.onkeydown = (e)=>{
   if(e.key==='e' || e.key==='E' || e.code==='KeyE'){ e.preventDefault(); toggleEdit(); return; }
   if(voiceOn && e.code==='BracketLeft'){ e.preventDefault(); tracker.jumpSentence(-1); return; }
   if(voiceOn && e.code==='BracketRight'){ e.preventDefault(); tracker.jumpSentence(1); return; }
-  if(e.key==='ArrowRight' || e.key===' ' || e.key==='PageDown'){ e.preventDefault(); goSlide(currentSlide+1); }
-  if(e.key==='ArrowLeft'  || e.key==='PageUp'){ e.preventDefault(); goSlide(currentSlide-1); }
+  if(e.key==='ArrowRight' || e.key===' ' || e.key==='PageDown'){ e.preventDefault(); stepSlide(1); }
+  if(e.key==='ArrowLeft'  || e.key==='PageUp'){ e.preventDefault(); stepSlide(-1); }
   if(e.key==='Home') goSlide(0);
   if(e.key==='End')  goSlide(total-1);
 };
@@ -790,9 +887,9 @@ window.onkeydown = (e)=>{
 /* ===== 동기화 호스트 ===== */
 const host = Sync.createHost({
   onCommand: (cmd, d)=>{
-    if(cmd==='goto') goSlide(d.idx);
-    else if(cmd==='next') goSlide(currentSlide+1);
-    else if(cmd==='prev') goSlide(currentSlide-1);
+    if(cmd==='goto'){ if(d.idx !== currentSlide) goSlide(d.idx); }
+    else if(cmd==='next') stepSlide(1);
+    else if(cmd==='prev') stepSlide(-1);
     else if(cmd==='first') goSlide(0);
     else if(cmd==='toggleCover') (coverVisible ? coverHide() : coverShow());
     else if(cmd==='media') (mediaPlaying ? closeMediaOverlay() : playMedia());
@@ -825,6 +922,25 @@ function deckBase(){
   if(location.protocol === 'file:') return location.href.replace(/[^/]*$/, '');
   return location.href.replace(/[^/]*(\?.*)?$/, '');
 }
+/* ===== 준비 메뉴 ===== */
+function prepOpen(){ return !document.getElementById('prepMenu').classList.contains('hidden'); }
+function closePrep(){
+  document.getElementById('prepMenu').classList.add('hidden');
+  document.getElementById('prepBtn').setAttribute('aria-expanded', 'false');
+}
+function togglePrep(e){
+  e.stopPropagation();
+  if(prepOpen()){ closePrep(); return; }
+  document.getElementById('prepMenu').classList.remove('hidden');
+  document.getElementById('prepBtn').setAttribute('aria-expanded', 'true');
+}
+// 메뉴 밖을 누르거나 메뉴 항목을 고르면 닫힘 (단축키 안내 글자를 누를 때는 유지)
+document.addEventListener('click', (e)=>{
+  if(!prepOpen()) return;
+  const inMenu = e.target.closest('#prepMenu');
+  if(!inMenu || e.target.closest('button')) closePrep();
+});
+
 function toggleRemote(){
   const panel = document.getElementById('remotePanel');
   if(!panel.classList.contains('hidden')){ panel.classList.add('hidden'); return; }
@@ -898,10 +1014,10 @@ function applyVoiceUI(){
   document.getElementById('voiceBar').classList.toggle('hidden', !voiceOn);
   const b = document.getElementById('micBtn');
   b.classList.toggle('active', voiceOn);
-  b.innerText = voiceOn ? '🎙 음성 추적 중' : '🎙 음성 추적';
+  b.innerHTML = (voiceOn ? '음성 추적 중' : '🎙 음성 추적') + '<kbd>M</kbd>';
   document.getElementById('modeHint').innerText = voiceOn
-    ? '🎙 음성 추적 중 — 단어 클릭: 그 위치부터 · [ ] 앞/뒤 문장 · M 끄기'
-    : 'PDF SYNC — 발표 창·연결된 기기가 함께 넘어갑니다';
+    ? '단어 클릭: 그 위치부터 · [ ] 앞/뒤 문장 · M 끄기'
+    : '발표 창과 연결된 기기가 함께 넘어갑니다';
   updatePace();
 }
 const VOICE_STATUS = {
@@ -1090,6 +1206,9 @@ async function init(){
   setTotalMin(Math.round(targetSec/60));     // 저장된 총 발표 시간으로 입력칸 채움
   const preset = new URLSearchParams(location.search).get('preset');
   if(preset && /^[\w-]+$/.test(preset)){ await loadPreset(preset); return; }
+  const src = localStorage.getItem('slideSrc') || '';   // 지난번 HTML 덱(주소·파일)이면 그것부터
+  if(src.startsWith('url:') && await openHtml(src.slice(4), decodeURIComponent(new URL(src.slice(4), location.href).pathname.split('/').filter(Boolean).pop() || 'html'))) return;
+  if(src.startsWith('file:')){ const u = await PdfRender.loadMediaURL('htmldeck'); if(u && await openHtml(u, src.slice(5))) return; }
   const ok = await PdfRender.loadStored();   // 저장된 PDF 있으면 자동 로드
   if(ok){
     total = PdfRender.pageCount();
@@ -1103,7 +1222,9 @@ async function loadPreset(id){
   const base = `presets/${id}/`;
   try{
     const p = await (await fetch(base + 'preset.json', { cache:'no-store' })).json();
-    total = await PdfRender.loadPdf(base + p.pdf, (p.title || id) + '.pdf');
+    // &src=html 이고 preset 에 html 덱이 있으면 덱 페이지 그대로(모션 유지), 아니면 PDF
+    if(p.html && new URLSearchParams(location.search).get('src') === 'html') await loadHtmlDeck(p.html, p.title || id);
+    else total = await PdfRender.loadPdf(base + p.pdf, (p.title || id) + '.pdf');
     Notes.setDeck('preset-' + id);
     if(p.title) document.getElementById('cvTitle').innerText = p.title;
     if([...Array(total).keys()].every((i)=> Notes.isEmpty(i))){

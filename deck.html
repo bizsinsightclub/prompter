@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>연단 슬라이드 · PDF 텔레프롬프터</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
-  html,body{height:100%;background:#0E0E0E;overflow:hidden;font-family:'Inter','Noto Sans KR',sans-serif;}
+  html,body{height:100%;background:#0E0E0E;overflow:hidden;font-family:'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;font-variant-numeric:tabular-nums;}
   #stage{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;background:#0E0E0E;}
   #slide{max-width:100vw;max-height:100vh;object-fit:contain;display:none;}
   #waiting{color:#555;font-size:18px;font-weight:700;}
@@ -27,7 +27,7 @@
   #gate p{font-size:15px;color:#888;line-height:1.7;max-width:520px;word-break:keep-all;margin-bottom:30px;}
   #codeInput{width:240px;font-size:64px;font-weight:900;letter-spacing:0.3em;text-align:center;
     background:#000;border:2px solid #262626;border-radius:16px;color:#F97316;padding:14px 0;
-    font-family:'Inter',monospace;outline:none;}
+    font-family:inherit;outline:none;}
   #codeInput:focus{border-color:#F97316;}
   #gate .go{margin-top:24px;background:#F97316;color:#000;border:none;border-radius:12px;
     padding:16px 48px;font-size:18px;font-weight:900;cursor:pointer;font-family:inherit;}
@@ -56,7 +56,7 @@
   <input id="codeInput" inputmode="numeric" maxlength="3" placeholder="000" autocomplete="off">
   <button class="go" id="goBtn">연결</button>
   <div class="err" id="gateErr"></div>
-  <div class="hint">슬라이드 이미지는 프롬프터가 직접 전송합니다 (이 기기에 PDF 불필요)</div>
+  <div class="hint">슬라이드는 프롬프터가 보냅니다 — PDF는 이미지로, HTML 덱은 덱 주소로 열어 모션까지 (이 기기에 파일 불필요)</div>
 </div>
 
 <script src="js/config.js"></script>
@@ -71,6 +71,7 @@ const waiting = document.getElementById('waiting');
 
 function showImage(dataUrl){
   if(!dataUrl) return;
+  if(htmlFrame){ htmlFrame.remove(); htmlFrame = null; }
   slideImg.src = dataUrl;
   slideImg.style.display = 'block';
   waiting.style.display = 'none';
@@ -82,8 +83,43 @@ function status(text, state){
 function hideStatusSoon(){ setTimeout(()=> document.getElementById('status').classList.add('hidden'), 2500); }
 function gateOff(){ document.getElementById('gate').classList.add('hidden'); }
 
+/* HTML 덱 — 프롬프터가 보낸 덱 주소를 그대로 띄우고(모션 유지) 장 번호·키를 따라 한다.
+   덱 규약(web-slide-deck): section.slide 중 .on 이 현재 장 · window.go(n) */
+let htmlFrame = null, htmlIdx = 0;
+function deckCur(w){ try{ return [...w.document.querySelectorAll('section.slide')].findIndex((s)=> s.classList.contains('on')); }catch(e){ return -1; } }
+function syncHtml(idx){
+  htmlIdx = idx;
+  const w = htmlFrame && htmlFrame.contentWindow;
+  try{ if(deckCur(w) >= 0 && deckCur(w) !== idx) w.go(idx+1); }catch(e){}
+}
+function showHtml(url, idx){
+  if(!htmlFrame || htmlFrame.dataset.url !== url){
+    if(htmlFrame) htmlFrame.remove();
+    htmlFrame = document.createElement('iframe');
+    htmlFrame.dataset.url = url; htmlFrame.src = url; htmlFrame.tabIndex = -1;
+    htmlFrame.style.cssText = 'width:100vw;height:100vh;border:0;pointer-events:none;background:#000';
+    htmlFrame.onload = ()=>{
+      const w = htmlFrame.contentWindow;
+      try{   // 덱의 메뉴·노트는 숨기고 슬라이드만
+        const st = w.document.createElement('style');
+        st.textContent = '#bar,#prog,#notes,#outline,#tip{display:none!important}#stage{inset:0!important}';
+        w.document.head.appendChild(st); w.dispatchEvent(new w.Event('resize'));
+      }catch(e){ status('이 덱을 열 수 없습니다 — 프롬프터와 같은 사이트에 올린 덱 주소여야 합니다 (파일로 연 덱은 같은 PC만)', 'bad'); }
+      syncHtml(htmlIdx);
+    };
+    document.getElementById('stage').appendChild(htmlFrame);
+  }
+  slideImg.style.display = 'none'; waiting.style.display = 'none';
+  syncHtml(idx);
+}
+function htmlKey(key){   // 덱이 직접 받은 것처럼 → 모션 비트가 남았으면 비트, 아니면 다음 장
+  const w = htmlFrame && htmlFrame.contentWindow;
+  try{ w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key, bubbles:true })); }catch(e){}
+}
+
 function onMessage(d){
-  if(d.type === 'slide'){ connected = true; gateOff(); showImage(d.image); }
+  if(d.type === 'slide'){ connected = true; gateOff(); if(d.html) showHtml(d.html, d.idx); else showImage(d.image); }
+  else if(d.type === 'key'){ if(htmlFrame) htmlKey(d.key); }
   else if(d.type === 'state'){ connected = true; gateOff(); }
   else if(d.type === 'media'){ if(d.action==='play') showMedia(d); else hideMedia(); }
 }
