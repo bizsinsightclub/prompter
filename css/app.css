@@ -191,6 +191,12 @@ header { height: var(--head-h); flex-shrink: 0; padding: 0 28px; background: var
 .total-set input { width: 84px; background: var(--bg); border: 1px solid var(--border-ui); color: var(--accent); border-radius: 6px; padding: 10px; font: 700 20px var(--font); text-align: center; }
 .total-set input:focus { border-color: var(--accent); outline: none; }
 .total-set .rec-hint { font-size: 14px; color: var(--dim); }
+.start-cur { margin-top: 28px; width: min(560px, 80vw); border: 1px solid var(--border-ui); border-radius: 10px; padding: 18px 20px; background: var(--panel-2); }
+.start-cur.hidden { display: none; }
+.start-cur .sc-name { font-size: 16px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.start-cur .sc-name b { color: var(--text); }
+.start-cur .sc-btns { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.start-cur .sc-sub { margin-top: 12px; font-size: 14px; color: var(--dim); }
 .src-html { margin-top: 14px; width: min(560px, 80vw); display: flex; gap: 8px; }
 .src-html input { flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--border-ui); color: var(--text); border-radius: 6px; padding: 0 12px; font: 15px var(--font); }
 .src-html input:focus { border-color: var(--accent); outline: none; }

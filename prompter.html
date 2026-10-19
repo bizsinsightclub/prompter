@@ -16,6 +16,16 @@
   <div class="s-eyebrow">PDF TELEPROMPTER</div>
   <h1 id="startTitle">발표 슬라이드를 불러오세요</h1>
   <p><b>PDF</b>는 페이지를 이미지로 바꿔 띄우고, <b>HTML 덱</b>은 덱 페이지를 그대로 띄워 모션·애니메이션이 살아 있습니다. HTML 덱에 발표자 노트가 있으면 대본으로 가져옵니다.</p>
+  <div id="startCur" class="start-cur hidden">
+    <div class="sc-name">지금 열린 슬라이드 <b id="scName">—</b></div>
+    <div class="sc-name">대본 <b id="scNotes">0</b> 채워짐</div>
+    <div class="sc-btns">
+      <button class="btn primary" onclick="hideStart()">이대로 계속 (Esc)</button>
+      <button class="btn" onclick="document.getElementById('importFile').click()">대본 파일 가져오기</button>
+      <button class="btn" onclick="resetScript()" id="resetBtn">대본 처음 상태로</button>
+    </div>
+    <div class="sc-sub">다른 슬라이드로 바꾸려면 아래에 새 파일이나 덱 주소를 넣으세요</div>
+  </div>
   <div id="dropzone">
     <div class="dz-icon">📄</div>
     <div class="dz-main">PDF 또는 HTML 덱 파일을 끌어다 놓거나 클릭해 선택</div>
@@ -61,6 +71,7 @@
         </div>
       </div>
     </div>
+    <button class="btn" onclick="showStart()" title="PDF·HTML 덱 바꾸기, 대본 가져오기·되돌리기">📂 파일·대본 교체</button>
     <span class="head-sep"></span>
     <button class="btn" id="micBtn" onclick="toggleVoice()" title="마이크로 읽은 위치를 따라가며 하이라이트 (M)">🎙 음성 추적<kbd>M</kbd></button>
     <button class="btn" id="coverBtn" onclick="coverShow()">가림<kbd>Esc</kbd></button>
@@ -359,7 +370,17 @@ let readFrac = 0;           // 이 장표에서 읽은 비율 0~1
 const paceView = { text:'', cls:'' };
 
 /* ===== 시작 화면 / PDF 로드 ===== */
-function showStart(){ document.getElementById('start').classList.remove('hidden'); }
+function showStart(){
+  // 이미 열린 슬라이드가 있으면 '이대로 계속'·대본 바꾸기를 함께 보여 준다
+  document.getElementById('startCur').classList.toggle('hidden', !total);
+  if(total){
+    document.getElementById('scName').innerText = htmlDeck ? 'HTML · ' + htmlDeck.name : 'PDF · ' + (PdfRender.name() || '');
+    let n = 0; for(let i=0;i<total;i++) if(!Notes.isEmpty(i)) n++;
+    document.getElementById('scNotes').innerText = `${n} / ${total}장`;
+    document.getElementById('resetBtn').innerText = presetId() ? '준비된 대본으로 되돌리기' : htmlDeck ? '덱 발표자 노트로 되돌리기' : '대본 비우기';
+  }
+  document.getElementById('start').classList.remove('hidden');
+}
 function hideStart(){ document.getElementById('start').classList.add('hidden'); }
 
 async function handlePdf(file){
@@ -368,6 +389,7 @@ async function handlePdf(file){
   document.getElementById('thumbPh').innerText = '변환 중…';
   try{
     total = await PdfRender.loadPdf(file, file.name);
+    presetData = null;
     if(htmlDeck) clearHtmlDeck();
     try{ localStorage.removeItem('slideSrc'); }catch(e){}
     Notes.setDeck(file.name.replace(/\.pdf$/i,''));
@@ -390,6 +412,7 @@ function afterPdfLoaded(){
    프롬프터와 같은 사이트(origin)에 있거나 파일로 불러온 덱만 조종할 수 있다.
    덱 규약(web-slide-deck): section.slide 중 .on 이 현재 장 · data-note 발표자 노트 · window.go(n) ===== */
 let htmlDeck = null;              // { url, name, frame }
+let presetData = null;            // ?preset= 으로 연 준비된 발표(대본 되돌리기용)
 let pendingDeckSync = false;      // 새로 연 발표 창이 뜨면 현재 장으로 맞춤
 function deckSlides(w){ try{ return [...w.document.querySelectorAll('section.slide')]; }catch(e){ return []; } }
 function deckCur(w){ return deckSlides(w).findIndex((s)=> s.classList.contains('on')); }   // 0부터, 없으면 -1
@@ -442,15 +465,30 @@ function clearHtmlDeck(){   // 발표 창은 PDF용(deck.html)·HTML용이 서�
   if(htmlDeck){ htmlDeck.frame.remove(); htmlDeck = null; }
 }
 async function openHtml(url, name){
+  presetData = null;
   try{
     const slides = await loadHtmlDeck(url, name);
     Notes.setDeck('html-' + name.replace(/\.html?$/i, ''));
-    if(slides.every((s, i)=> Notes.isEmpty(i)))   // 덱에 적힌 발표자 노트를 대본으로
-      slides.forEach((s, i)=>{ if(s.dataset.note) Notes.set(i, esc(s.dataset.note).replace(/\n/g, '<br>')); });
+    if(slides.every((s, i)=> Notes.isEmpty(i))) fillNotesFromDeck(slides);
     afterPdfLoaded();
     hideStart();
     return true;
   }catch(e){ alert('HTML 덱을 불러오지 못했습니다: ' + e.message); return false; }
+}
+function presetId(){ const m = Notes.getDeck().match(/^preset-([\w-]+)$/); return m ? m[1] : null; }
+function fillNotesFromDeck(slides){   // 덱에 적힌 발표자 노트(data-note)를 대본으로
+  slides.forEach((s, i)=>{ if(s.dataset.note) Notes.set(i, esc(s.dataset.note).replace(/\n/g, '<br>')); });
+}
+/* 대본 처음 상태로 — 준비된 발표는 준비된 대본, HTML 덱은 덱 노트, PDF는 빈 대본 */
+async function resetScript(){
+  if(!confirm('이 슬라이드의 대본을 지우고 처음 상태로 되돌릴까요? 고친 내용은 사라집니다.')) return;
+  const pid = presetId();   // 지난번에 준비된 발표로 열었던 것이 남아 있어도 원본 대본을 다시 받아 온다
+  if(pid && !presetData){ try{ presetData = await (await fetch(`presets/${pid}/preset.json`, { cache:'no-store' })).json(); }catch(e){} }
+  for(let i=0;i<total;i++) Notes.set(i, '');
+  if(presetData) await Notes.importJSON(JSON.stringify(presetData));
+  else if(htmlDeck) fillNotesFromDeck(deckSlides(htmlDeck.frame.contentWindow));
+  recSec = Notes.getTime(currentSlide) || defaultRec; document.getElementById('recInput').value = recSec;
+  recomputeWeights(); renderNote(); broadcast(); hideStart();
 }
 function openHtmlUrl(){
   const url = document.getElementById('htmlUrl').value.trim();
@@ -867,7 +905,7 @@ window.onkeydown = (e)=>{
   if(document.getElementById('mediaPanel').classList.contains('show')){ if(e.key==='Escape') closeMediaDialog(); return; }
   if(document.getElementById('allocPanel').classList.contains('show')){ if(e.key==='Escape') closeAlloc(); return; }
   if(editing){ if(e.key==='Escape') commitEdit(); return; }   // 편집 중엔 입력 우선
-  if(!document.getElementById('start').classList.contains('hidden')) return;
+  if(!document.getElementById('start').classList.contains('hidden')){ if(e.key==='Escape' && total) hideStart(); return; }
   // e.code 도 함께 확인 — 한글 입력 상태에서도 단축키가 동작하도록
   if(e.key==='+' || e.key==='='){ e.preventDefault(); changeFont(3); return; }
   if(e.key==='-' || e.key==='_'){ e.preventDefault(); changeFont(-3); return; }
@@ -960,7 +998,7 @@ document.getElementById('importFile').addEventListener('change', async (e)=>{
   try{
     const n = await Notes.importJSON(f);
     recSec = Notes.getTime(currentSlide) || defaultRec; document.getElementById('recInput').value = recSec;
-    recomputeWeights(); renderNote(); broadcast(); alert(`${n}개 대본을 가져왔습니다.`);
+    recomputeWeights(); renderNote(); broadcast(); hideStart(); alert(`${n}개 대본을 가져왔습니다.`);
   }
   catch(err){ alert('가져오기 실패: ' + err.message); }
   e.target.value = '';
@@ -1222,6 +1260,7 @@ async function loadPreset(id){
   const base = `presets/${id}/`;
   try{
     const p = await (await fetch(base + 'preset.json', { cache:'no-store' })).json();
+    presetData = p;
     // &src=html 이고 preset 에 html 덱이 있으면 덱 페이지 그대로(모션 유지), 아니면 PDF
     if(p.html && new URLSearchParams(location.search).get('src') === 'html') await loadHtmlDeck(p.html, p.title || id);
     else total = await PdfRender.loadPdf(base + p.pdf, (p.title || id) + '.pdf');
